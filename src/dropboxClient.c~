@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <netdb.h> 
 
-//CODIGO DE TUTORIAL DADO NA AULA 09
+//CODIGO TUTORIAL DADO NA AULA 09
 
 #define PORT 4000
 

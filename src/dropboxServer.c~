@@ -6,9 +6,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-
-//CODIGO DE TUTORIAL DADO NA AULA 09
-
 #define PORT 4000
 
 int main(int argc, char *argv[])
