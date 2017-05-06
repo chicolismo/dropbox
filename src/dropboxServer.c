@@ -1,119 +1,72 @@
-/*
-    C socket server example, handles multiple clients using threads
-*/
- 
-#include<stdio.h>
-#include<string.h>    //strlen
-#include<stdlib.h>    //strlen
-#include<sys/socket.h>
-#include<arpa/inet.h> //inet_addr
-#include<unistd.h>    //write
-#include<pthread.h> //for threading , link with lpthread
- 
-//the thread function
-void *connection_handler(void *);
- 
-int main(int argc , char *argv[])
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+
+#define MIN_AGR 1
+#define MAX_CONNECTIONS 5
+#define BUFFER_SIZE 256
+
+int main(int argc, char *argv[])
 {
-    int socket_desc , client_sock , c , *new_sock;
-    struct sockaddr_in server , client;
-     
-    //Create socket
-    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (socket_desc == -1)
-    {
-        printf("Could not create socket");
-    }
-    puts("Socket created");
-     
-    //Prepare the sockaddr_in structure
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons( 8888 );
-     
-    //Bind
-    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-        //print the error message
-        perror("bind failed. Error");
-        return 1;
-    }
-    puts("bind done");
-     
-    //Listen
-    listen(socket_desc , 3);
-     
-    //Accept and incoming connection
-    puts("Waiting for incoming connections...");
-    c = sizeof(struct sockaddr_in);
-     
-     
-    //Accept and incoming connection
-    puts("Waiting for incoming connections...");
-    c = sizeof(struct sockaddr_in);
-    while( (client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c)) )
-    {
-        puts("Connection accepted");
-         
-        pthread_t sniffer_thread;
-        new_sock = malloc(1);
-        *new_sock = client_sock;
-         
-        if( pthread_create( &sniffer_thread , NULL ,  connection_handler , (void*) new_sock) < 0)
-        {
-            perror("could not create thread");
-            return 1;
-        }
-         
-        pthread_detach(sniffer_thread);
-        puts("Handler assigned");
-    }
-     
-    if (client_sock < 0)
-    {
-        perror("accept failed");
-        return 1;
-    }
-     
-    return 0;
-}
- 
-/*
- * This will handle connection for each client
- * */
-void *connection_handler(void *socket_desc)
-{
-    //Get the socket descriptor
-    int sock = *(int*)socket_desc;
-    int read_size;
-    char *message , client_message[2000];
-     
-    //Send some messages to the client
-    message = "Greetings! I am your connection handler\n";
-    write(sock , message , strlen(message));
-     
-    message = "Now type something and i shall repeat what you type \n";
-    write(sock , message , strlen(message));
-     
-    //Receive a message from client
-    while( (read_size = recv(sock , client_message , 2000 , 0)) > 0 )
-    {
-        //Send the message back to client
-        write(sock , client_message , strlen(client_message));
-    }
-     
-    if(read_size == 0)
-    {
-        puts("Client disconnected");
-        fflush(stdout);
-    }
-    else if(read_size == -1)
-    {
-        perror("recv failed");
-    }
-         
-    //Free the socket pointer
-    free(socket_desc);
-     
-    return 0;
+	int sockfd, newsockfd, n;
+	socklen_t client_len;
+	struct sockaddr_in serv_addr, client_addr;
+	char buffer[BUFFER_SIZE];
+	
+	if(argc < MIN_ARG)
+	{
+		printf("Not enough arguments passed.");
+		exit(1);
+	}
+	
+	int PORT = atoi(argv[1]);
+	
+	if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+        printf("ERROR opening socket");
+	
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT);
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr.sin_zero), 8);     
+    
+	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+		printf("ERROR on binding");
+	
+	while(true)
+	{
+		listen(sockfd, MAX_CONNECTIONS);
+		
+		client_len = sizeof(struct sockaddr_in);
+		if ((newsockfd = accept(sockfd, (struct sockaddr *) &client_addr, &client_len)) == -1) 
+			printf("ERROR on accept");
+		
+		//http://stackoverflow.com/questions/3719462/sockets-and-threads-using-c
+		//o problema aqui é: o newsockfd nao vai ficar sendo sobreescrito sempre que criar uma nova thread?
+		//devemos fazer o accept dentro da thread talvez?
+		//se não for dentro da thread, onde a gente da close no socket?
+		pthread_t thread;
+		pthread_create(&thread, NULL, run_client, &newsockfd);
+		
+		bzero(buffer, BUFFER_SIZE);
+		
+		/* read from the socket */
+		n = read(newsockfd, buffer, BUFFER_SIZE);
+		if (n < 0) 
+			printf("ERROR reading from socket");
+		printf("Here is the message: %s\n", buffer);
+		
+		/* write in the socket */ 
+		n = write(newsockfd,"I got your message", 18);
+		if (n < 0) 
+			printf("ERROR writing to socket");
+
+		close(newsockfd);
+		close(sockfd);
+	}
+	
+	return 0; 
 }
