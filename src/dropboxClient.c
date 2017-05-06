@@ -1,64 +1,62 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h> 
-
-//CODIGO DE TUTORIAL DADO NA AULA 09
-
-#define PORT 4000
-
-int main(int argc, char *argv[])
+/*
+    C ECHO client example using sockets
+*/
+#include<stdio.h> //printf
+#include<string.h>    //strlen
+#include<sys/socket.h>    //socket
+#include<arpa/inet.h> //inet_addr
+ 
+int main(int argc , char *argv[])
 {
-    int sockfd, n;
-    struct sockaddr_in serv_addr;
-    struct hostent *server;
-	
-    char buffer[256];
-    if (argc < 2) {
-		fprintf(stderr,"usage %s hostname\n", argv[0]);
-		exit(0);
+    int sock;
+    struct sockaddr_in server;
+    char message[1000] , server_reply[2000];
+     
+    //Create socket
+    sock = socket(AF_INET , SOCK_STREAM , 0);
+    if (sock == -1)
+    {
+        printf("Could not create socket");
     }
-	
-	server = gethostbyname(argv[1]);
-	if (server == NULL) {
-        fprintf(stderr,"ERROR, no such host\n");
-        exit(0);
+    puts("Socket created");
+     
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_family = AF_INET;
+    server.sin_port = htons( 8888 );
+ 
+    //Connect to remote server
+    if (connect(sock , (struct sockaddr *)&server , sizeof(server)) < 0)
+    {
+        perror("connect failed. Error");
+        return 1;
     }
-    
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-        printf("ERROR opening socket\n");
-    
-	serv_addr.sin_family = AF_INET;     
-	serv_addr.sin_port = htons(PORT);    
-	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
-	bzero(&(serv_addr.sin_zero), 8);     
-	
-    
-	if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
-        printf("ERROR connecting\n");
-
-    printf("Enter the message: ");
-    bzero(buffer, 256);
-    fgets(buffer, 256, stdin);
-    
-	/* write in the socket */
-	n = write(sockfd, buffer, strlen(buffer));
-    if (n < 0) 
-		printf("ERROR writing to socket\n");
-
-    bzero(buffer,256);
-	
-	/* read from the socket */
-    n = read(sockfd, buffer, 256);
-    if (n < 0) 
-		printf("ERROR reading from socket\n");
-
-    printf("%s\n",buffer);
-    
-	close(sockfd);
+     
+    puts("Connected\n");
+     
+    //keep communicating with server
+    while(1)
+    {
+        printf("Enter message : ");
+        scanf("%s" , message);
+         
+        //Send some data
+        if( send(sock , message , strlen(message) , 0) < 0)
+        {
+            puts("Send failed");
+            return 1;
+        }
+         
+        //Receive a reply from the server
+        if( recv(sock , server_reply , 2000 , 0) < 0)
+        {
+            puts("recv failed");
+            break;
+        }
+         
+        puts("Server reply :");
+        puts(server_reply);
+    }
+     
+    close(sock);
     return 0;
 }
