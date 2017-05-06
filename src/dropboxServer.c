@@ -68,7 +68,7 @@ int main(int argc, char *argv[])
 		pthread_t client_thread;
 		int *socket_thread = socket_client;
 		
-		pthread_create(&client_thread, NULL, run_client, (void*)socket_thread);
+		pthread_create(&client_thread, NULL, run_thread, (void*)socket_thread);
 		
 		pthread_detach(client_thread);
 		

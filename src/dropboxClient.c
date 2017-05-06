@@ -14,7 +14,7 @@
 
 int main(int argc, char *argv[])
 {
-    int socket, message;
+    int socketfd, message;
     struct sockaddr_in serv_addr;
     struct hostent *server;
     char buffer[BUFFER_SIZE];
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
         exit(0);
     }
     
-    if ((socket = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+    if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening socket\n");
     
 	serv_addr.sin_family = AF_INET;     
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
 
 
     
-	while(true) //mudar tudo aqui pro trabalho
+	while(1) //mudar tudo aqui pro trabalho
 	{
 		printf("Enter the message: ");
 		bzero(buffer, BUFFER_SIZE);
