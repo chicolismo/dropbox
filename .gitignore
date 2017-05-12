@@ -96,4 +96,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+# Manually added
+*.pbxproj
+*.xcworkspacedata
+*.xcuserstate
+*.xcscheme
+*.plist
+
 # End of https://www.gitignore.io/api/c,macos,linux
