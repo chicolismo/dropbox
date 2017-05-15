@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     struct hostent *server;
     char buffer[BUFFER_SIZE];
 	
-    if (argc < MIN_ARG) 
+    if (argc <= MIN_ARG) 
 	{
 		fprintf(stderr,"usage %s hostname\n", argv[0]);
 		exit(0);

@@ -22,7 +22,7 @@ void run_thread(void *socket_client)
 	//read
 	message = read(socket, buffer, BUFFER_SIZE);
 	if (message < 0) 
-			printf("ERROR reading from socket");
+		printf("ERROR reading from socket");
 	printf("Here is the message: %s\n", buffer);
 	
 	// write
@@ -34,6 +34,17 @@ void run_thread(void *socket_client)
 }
 
 
+void socket_thread()
+{
+
+
+
+	// TODO thread fuction
+
+
+	printf("Foi");
+}
+
 int main(int argc, char *argv[])
 {
 	int socket_connection, socket_client;
@@ -41,7 +52,7 @@ int main(int argc, char *argv[])
 	struct sockaddr_in serv_addr, client_addr;
 
 	
-	if(argc < MIN_ARG)
+	if(argc <= MIN_ARG)
 	{
 		printf("Not enough arguments passed.");
 		exit(1);
@@ -66,7 +77,6 @@ int main(int argc, char *argv[])
 	while( (socket_client = accept(socket_connection, (struct sockaddr *) &client_addr, &client_len)) )
 	{
 		pthread_t client_thread;
-		int *socket_thread = socket_client;
 		
 		pthread_create(&client_thread, NULL, run_thread, (void*)socket_thread);
 		
