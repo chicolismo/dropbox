@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	
 	int PORT = atoi(argv[3]);
 	
-	if ( (server = gethostbyname(argv[1])) == NULL ) 
+	if ( (server = gethostbyname(argv[2])) == NULL ) 
 	{
         fprintf(stderr,"ERROR, no such host\n");
         exit(0);
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 	bzero(&(serv_addr.sin_zero), 8);     
 	
     
-	if (connect(socket,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
+	if (connect(socketfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
         printf("ERROR connecting\n");
 
 
@@ -53,20 +53,20 @@ int main(int argc, char *argv[])
 		bzero(buffer, BUFFER_SIZE);
 		fgets(buffer, BUFFER_SIZE, stdin);
 		
-		message = write(socket, buffer, strlen(buffer));
+		message = write(socketfd, buffer, strlen(buffer));
 		if (message < 0) 
 			printf("ERROR writing to socket\n");
 
 		bzero(buffer,BUFFER_SIZE);
 		
 		/* read from the socket */
-		message = read(socket, buffer, BUFFER_SIZE);
+		message = read(socketfd, buffer, BUFFER_SIZE);
 		if (message < 0) 
 			printf("ERROR reading from socket\n");
 
 		printf("%s\n",buffer);
 		
-		close(socket);
+		close(socketfd);
 	}
     return 0;
 }

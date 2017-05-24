@@ -14,35 +14,25 @@
 void run_thread(void *socket_client)
 {
 	char buffer[BUFFER_SIZE];
-	int socket = *(int*)socket_client;
+	int socketfd = *(int*)socket_client;
 	int message;
+	printf("i created a thread\n");
 	
 	bzero(buffer, BUFFER_SIZE);
 	
 	//read
-	message = read(socket, buffer, BUFFER_SIZE);
-	if (message < 0) 
-		printf("ERROR reading from socket");
+	message = read(socketfd, buffer, BUFFER_SIZE);
+
 	printf("Here is the message: %s\n", buffer);
 	
 	// write
-	message = write(socket,"I got your message", 18);
+	message = write(socketfd,"I got your message", 18);
 	if (message < 0) 
 		printf("ERROR writing to socket");
 
-	close(socket);
-}
+	free(socket_client);
 
-
-void socket_thread()
-{
-
-
-
-	// TODO thread fuction
-
-
-	printf("Foi");
+	close(socketfd);
 }
 
 int main(int argc, char *argv[])
@@ -74,13 +64,24 @@ int main(int argc, char *argv[])
 	listen(socket_connection, MAX_CONNECTIONS);
 	client_len = sizeof(struct sockaddr_in);
 	
-	while( (socket_client = accept(socket_connection, (struct sockaddr *) &client_addr, &client_len)) )
+	while(1)
 	{
-		pthread_t client_thread;
+		if( (socket_client = accept(socket_connection, (struct sockaddr *) &client_addr, &client_len)) )
+
+		{
+			printf("accepted a client\n");
+			
+			int *new_sock;
+			new_sock = malloc(1);
+        	*new_sock = socket_client;
+			pthread_t client_thread;
 		
-		pthread_create(&client_thread, NULL, run_thread, (void*)socket_thread);
+			pthread_create(&client_thread, NULL, run_thread, (void*)new_sock);
 		
-		pthread_detach(client_thread);
+			pthread_detach(client_thread);
+
+			//free(new_sock);
+		}
 		
 	}
 	
