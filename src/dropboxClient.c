@@ -27,10 +27,6 @@ int connect_server(char *host, int port)
 	return socketfd;
 }
 
-
-
-
-
 int main(int argc, char *argv[])
 {
     int socketfd, message;
@@ -49,6 +45,7 @@ int main(int argc, char *argv[])
 	//função que verifica se existe a pasta sync_dir na home do cliente	
 	self.logged_in = 0;
 
+	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
     
 	while(1) //mudar tudo aqui pro trabalho
