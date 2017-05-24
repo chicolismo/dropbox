@@ -1,14 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h> 
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#define MIN_ARG 1
-#define MAX_CONNECTIONS 5
-#define BUFFER_SIZE 256
+#include "../include/dropboxServer.h"
+#include "../include/dropboxUtil.h"
 
 
 void run_thread(void *socket_client)
@@ -18,17 +9,19 @@ void run_thread(void *socket_client)
 	int message;
 	printf("i created a thread\n");
 	
-	bzero(buffer, BUFFER_SIZE);
-	
-	//read
-	message = read(socketfd, buffer, BUFFER_SIZE);
 
-	printf("Here is the message: %s\n", buffer);
-	
-	// write
-	message = write(socketfd,"I got your message", 18);
-	if (message < 0) 
-		printf("ERROR writing to socket");
+	while(1) {
+		bzero(buffer, BUFFER_SIZE);
+		message = read(socketfd, buffer, BUFFER_SIZE);
+		if (message < 0) 
+			printf("ERROR reading from socket");
+		else {
+			printf("Here is the message: %s\n", buffer);
+			// write
+			message = write(socketfd,"I got your message", 18);
+		}
+		
+	}
 
 	free(socket_client);
 
@@ -84,6 +77,8 @@ int main(int argc, char *argv[])
 		}
 		
 	}
+
+	printf("saí do meu while (server)\n");
 	
 	return 0; 
 }

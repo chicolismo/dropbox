@@ -1,33 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h> 
+#include "../include/dropboxClient.h"
+#include "../include/dropboxUtil.h"
 
-//CODIGO DE TUTORIAL DADO NA AULA 09
-
-#define MIN_ARG 3
-#define BUFFER_SIZE 256
-
-int main(int argc, char *argv[])
+int connect_server(char *host, int port)
 {
-    int socketfd, message;
+	int socketfd;
     struct sockaddr_in serv_addr;
     struct hostent *server;
-    char buffer[BUFFER_SIZE];
-	
-    if (argc <= MIN_ARG) 
-	{
-		fprintf(stderr,"usage %s hostname\n", argv[0]);
-		exit(0);
-    }
-	
-	int PORT = atoi(argv[3]);
-	
-	if ( (server = gethostbyname(argv[2])) == NULL ) 
+
+	if ( (server = gethostbyname(host)) == NULL ) 
 	{
         fprintf(stderr,"ERROR, no such host\n");
         exit(0);
@@ -37,15 +17,39 @@ int main(int argc, char *argv[])
         printf("ERROR opening socket\n");
     
 	serv_addr.sin_family = AF_INET;     
-	serv_addr.sin_port = htons(PORT);    
+	serv_addr.sin_port = htons(port);    
 	serv_addr.sin_addr = *((struct in_addr *)server->h_addr);
 	bzero(&(serv_addr.sin_zero), 8);     
 	
-    
 	if (connect(socketfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) 
         printf("ERROR connecting\n");
 
+	return socketfd;
+}
 
+
+
+
+
+int main(int argc, char *argv[])
+{
+    int socketfd, message;
+    char buffer[BUFFER_SIZE];
+
+	if (argc <= MIN_ARG) 
+	{
+		fprintf(stderr,"usage %s hostname\n", argv[0]);
+		exit(0);
+    }
+
+	//toda vez que criar um cliente ele vai ter uma estrutura de client com seu username para passar pro servidor armazenar na lista de gente conectados
+	struct client self;
+	//self.userid = argv[1];
+	//self.devices = {0,0};
+	//função que verifica se existe a pasta sync_dir na home do cliente	
+	self.logged_in = 0;
+
+	socketfd = connect_server(argv[2], atoi(argv[3]));
     
 	while(1) //mudar tudo aqui pro trabalho
 	{
@@ -66,7 +70,7 @@ int main(int argc, char *argv[])
 
 		printf("%s\n",buffer);
 		
-		close(socketfd);
+		//close(socketfd);
 	}
     return 0;
 }
