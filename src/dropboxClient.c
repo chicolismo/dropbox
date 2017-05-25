@@ -27,6 +27,19 @@ int connect_server(char *host, int port)
 	return socketfd;
 }
 
+void sync_client()
+{
+	// se o sync_dir nao existir, cria-lo
+	if (stat("~/sync_dir", &st) == -1) {
+		mkdir("~/sync_dir", 0700);
+	}
+
+	// cliente deve ver se existem arquivos do servidor para espelhar na pasta sync_dir
+	
+	//
+
+}
+
 int main(int argc, char *argv[])
 {
     int socketfd, message;
