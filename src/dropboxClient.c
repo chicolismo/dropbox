@@ -51,14 +51,51 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	//toda vez que criar um cliente ele vai ter uma estrutura de client com seu username para passar pro servidor armazenar na lista de gente conectados
 	struct client self;
+	struct dirent *dir;
+	struct stat st = {0};
+	DIR *d;
+
 	strcpy(self.userid, argv[1]);
 	self.logged_in = 0;
-	sync_client();
+	char home[256] = "/home/";
+	strcat(home, getlogin());
+	strcat(home, "/sync_dir");
 
+	if (stat(home, &st) == -1)
+		  mkdir(home, 0700);
+
+
+	d = opendir(home);
+	if (d)
+	{
+	  int i = 0;
+	  while ((dir = readdir(d)) != NULL)
+	  {
+		  struct file_info fi;
+
+		  //TEM QUE PARSEAR O NOME DO ARQUIVO
+		  strcpy(fi.name, d->d_name);
+		  strcpy(fi.extension, d->d_name);
+
+		  // pegar ultima data de modificação do arquivo
+		  struct stat attrib;
+		  stat(d->d_name, &attrib);
+		  strftime(fi.last_modified, MAXNAME, "%d-%m-%y", gmtime(&(attrib.st_ctime)));
+		  // strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
+		  fi.size = attrib.st_siz;
+
+		  self.fileinfo[i] = fi;
+		  i++;
+	  }
+	  closedir(d);
+	}
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
+
+	//send to server
+	send(server, self, sizeof(struct client), 0);
+	sync_client();
     
 	while(1) //mudar tudo aqui pro trabalho
 	{
