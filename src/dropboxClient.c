@@ -29,14 +29,14 @@ int connect_server(char *host, int port)
 
 void sync_client()
 {
+	struct stat st = {0};
+
 	// se o sync_dir nao existir, cria-lo
-	if (stat("~/sync_dir", &st) == -1) {
-		mkdir("~/sync_dir", 0700);
+	if (stat("/home/luiza/sync_dir", &st) == -1) {
+		mkdir("/home/luiza/sync_dir", 0700);
 	}
 
 	// cliente deve ver se existem arquivos do servidor para espelhar na pasta sync_dir
-	
-	//
 
 }
 
@@ -53,10 +53,9 @@ int main(int argc, char *argv[])
 
 	//toda vez que criar um cliente ele vai ter uma estrutura de client com seu username para passar pro servidor armazenar na lista de gente conectados
 	struct client self;
-	//self.userid = argv[1];
-	//self.devices = {0,0};
-	//função que verifica se existe a pasta sync_dir na home do cliente	
+	strcpy(self.userid, argv[1]);
 	self.logged_in = 0;
+	sync_client();
 
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
