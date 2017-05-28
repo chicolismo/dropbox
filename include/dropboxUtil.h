@@ -1,4 +1,5 @@
 //#include "fila2.h"
+#include <dirent.h> 
 
 #define BUFFER_SIZE 256
 #define MAXNAME 256
@@ -16,5 +17,6 @@ struct client {
 	char userid[MAXNAME];
 	struct file_info fileinfo[MAXFILES];
 	int logged_in;
-};
+} client;
 
+client map_sync_dir(char *home, char *login);

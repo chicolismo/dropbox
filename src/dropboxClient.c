@@ -1,6 +1,8 @@
 #include "../include/dropboxClient.h"
 #include "../include/dropboxUtil.h"
 
+struct client self;
+
 int connect_server(char *host, int port)
 {
 	int socketfd;
@@ -29,15 +31,24 @@ int connect_server(char *host, int port)
 
 void sync_client()
 {
-	struct stat st = {0};
-
-	// se o sync_dir nao existir, cria-lo
-	if (stat("/home/luiza/sync_dir", &st) == -1) {
-		mkdir("/home/luiza/sync_dir", 0700);
-	}
-
-	// cliente deve ver se existem arquivos do servidor para espelhar na pasta sync_dir
-
+	struct client server_mirror;
+	
+  	// fica esperando o servidor enviar o espelho de todos os arquivos que estao la
+    recv(socketfd, server_mirror, sizeof(struct client), 0);
+  
+  	// recebeu. agora vai comparar com os arquivos dele
+  	int i;
+  	for(i = 0; i < MAXFILES; i++) 
+    {
+      	if(strcmp(server_mirror.fileinfo[i], "") == 0)
+           break;
+    	else
+        {
+          //jeito inteligente de procurar no array de arquivos do self pra ver se esse arquivo existe
+          //se não existir, faz requisição de envio pro server
+          
+        }
+    }
 }
 
 int main(int argc, char *argv[])
@@ -51,50 +62,17 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	struct client self;
-	struct dirent *dir;
-	struct stat st = {0};
-	DIR *d;
-
-	strcpy(self.userid, argv[1]);
-	self.logged_in = 0;
-	char home[256] = "/home/";
+	char[256] home = "/home/";
 	strcat(home, getlogin());
-	strcat(home, "/sync_dir");
+	
+	//inicializa estrutura self do cliente
+	self = map_sync_dir(char *home, char *login);
 
-	if (stat(home, &st) == -1)
-		  mkdir(home, 0700);
-
-
-	d = opendir(home);
-	if (d)
-	{
-	  int i = 0;
-	  while ((dir = readdir(d)) != NULL)
-	  {
-		  struct file_info fi;
-
-		  //TEM QUE PARSEAR O NOME DO ARQUIVO
-		  strcpy(fi.name, d->d_name);
-		  strcpy(fi.extension, d->d_name);
-
-		  // pegar ultima data de modificação do arquivo
-		  struct stat attrib;
-		  stat(d->d_name, &attrib);
-		  strftime(fi.last_modified, MAXNAME, "%d-%m-%y", gmtime(&(attrib.st_ctime)));
-		  // strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
-		  fi.size = attrib.st_siz;
-
-		  self.fileinfo[i] = fi;
-		  i++;
-	  }
-	  closedir(d);
-	}
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
 
 	//send to server
-	send(server, self, sizeof(struct client), 0);
+	send(socketfd, self, sizeof(struct client), 0);
 	sync_client();
     
 	while(1) //mudar tudo aqui pro trabalho
