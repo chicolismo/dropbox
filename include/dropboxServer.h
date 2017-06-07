@@ -10,5 +10,5 @@
 #define MAX_CONNECTIONS 5
 
 void sync_server();
-void receive_file(char *file);
-void send_file(char *file);
+void receive_file(char *file, int client_socket);
+void send_file(char *file, int client_socket);

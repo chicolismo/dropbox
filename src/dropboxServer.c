@@ -2,6 +2,103 @@
 #include "../include/dropboxUtil.h"
 
 
+void receive_file(char *file, int client_socket)
+{
+	/*int fd;
+	struct stat file_stat;
+	ssize_t len;
+	char file_size[256];
+	int offset;
+	int sent_bytes = 0;
+ 	int remain_data;
+
+	// Open file
+	fd = open(file, O_WRONLY);
+	if (fd == -1)
+    {
+		printf("Error opening file");
+		exit(EXIT_FAILURE);
+    }
+
+	// Get file stats
+	if (fstat(fd, &file_stat) < 0)
+	{
+		printf("Error fstat");
+		exit(EXIT_FAILURE);
+	}
+
+	// Send file size
+	len = send(client_socket, file_size, sizeof(file_size), 0);
+	if (len < 0)
+	{
+		printf("Error on sending file size");
+		exit(EXIT_FAILURE);
+	}
+	printf("Server sent %d bytes for the size\n", len);
+
+	// Send file data
+	offset = 0;
+	remain_data = file_stat.st_size;
+	while (((sent_bytes = sendfile(client_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0))
+	{
+		remain_data -= sent_bytes;
+		printf("Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+	}*/
+}
+
+void send_file(char *file, int client_socket)
+{
+	int fd;
+	struct stat file_stat;
+	ssize_t len;
+	char file_size[256];
+	int offset;
+	int sent_bytes = 0;
+ 	int remain_data;
+
+	// Open file
+	fd = open(file, O_RDONLY);
+	if (fd == -1)
+    {
+		printf("Error opening file");
+		exit(EXIT_FAILURE);
+    }
+
+	// Get file stats
+	if (fstat(fd, &file_stat) < 0)
+	{
+		printf("Error fstat");
+		exit(EXIT_FAILURE);
+	}
+
+	// Send file name
+	len = send(client_socket, file, sizeof(file), 0);
+	if (len < 0)
+	{
+		printf("Error on sending file name");
+		exit(EXIT_FAILURE);
+	}
+	printf("Server sent %d bytes for the file name\n", len);
+
+	// Send file size
+	len = send(client_socket, file_size, sizeof(file_size), 0);
+	if (len < 0)
+	{
+		printf("Error on sending file size");
+		exit(EXIT_FAILURE);
+	}
+	printf("Server sent %d bytes for the size\n", len);
+
+	// Send file data
+	offset = 0;
+	remain_data = file_stat.st_size;
+	while (((sent_bytes = sendfile(client_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0))
+	{
+		remain_data -= sent_bytes;
+		printf("Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+	}
+}
+
 void run_thread(void *socket_client)
 {
 	char buffer[BUFFER_SIZE];
