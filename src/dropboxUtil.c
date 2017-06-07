@@ -47,3 +47,19 @@ client map_sync_dir(char *home, char *login)
 	
 	return c;
 }
+
+file_info search_files(client *client, char filename[MAXNAME])
+{
+	int i;
+	for(i = 0; i < MAXFILES; i++)
+	{
+		if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
+			break;
+		else
+		{
+			if(strcmp(filename, client->fileinfo[i].name) == 0)
+				return client->fileinfo[i];
+		}
+	}
+	return NULL;
+}

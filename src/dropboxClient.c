@@ -32,6 +32,7 @@ int connect_server(char *host, int port)
 void sync_client()
 {
 	struct client server_mirror;
+	struct file_info fi;
 	
   	// fica esperando o servidor enviar o espelho de todos os arquivos que estao la
     recv(socketfd, server_mirror, sizeof(struct client), 0);
@@ -40,13 +41,25 @@ void sync_client()
   	int i;
   	for(i = 0; i < MAXFILES; i++) 
     {
-      	if(strcmp(server_mirror.fileinfo[i], "") == 0)
+      	if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
            break;
     	else
         {
-          //jeito inteligente de procurar no array de arquivos do self pra ver se esse arquivo existe
-          //se não existir, faz requisição de envio pro server
-          
+        	// fazer uma função que busca dentro do vetor file_info um struct file_info com o mesmo nome.
+			fi = search_files(&self, server_mirror.fileinfo[i].name);
+
+			if(fi != NULL)
+			{
+				if(file_more_recent_than(server_mirror.fileinfo[i], fi)
+				{
+					//update file in client directory
+					//download file
+				}
+          	}
+			else
+			{
+				//download file
+			}
         }
     }
 }
@@ -66,7 +79,7 @@ int main(int argc, char *argv[])
 	strcat(home, getlogin());
 	
 	//inicializa estrutura self do cliente
-	self = map_sync_dir(char *home, char *login);
+	self = map_sync_dir(home, argv[1]);
 
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
