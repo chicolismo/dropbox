@@ -29,6 +29,8 @@ int connect_server(char *host, int port)
 	return socketfd;
 }
 
+
+
 void sync_client()
 {
 	struct client server_mirror;
@@ -86,7 +88,13 @@ int main(int argc, char *argv[])
 
 	//send to server
 	send(socketfd, self, sizeof(struct client), 0);
-	sync_client();
+
+	// dispara nova thread pra fazer o sync_client
+	// SOCORRO???? COMO QUE FICA DO LADO DO SERVIDOR???
+	pthread_t initial_sync_client;
+	pthread_create(&initial_sync_client, NULL, sync_client, NULL);
+	pthread_detach(initial_sync_client);
+//	sync_client();
     
 	while(1) //mudar tudo aqui pro trabalho
 	{
