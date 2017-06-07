@@ -7,10 +7,10 @@ void receive_file(char *file, int client_socket)
 	int fd, verification_fd;
 	struct stat file_stat;
 	ssize_t len;
+	int remain_data;
 	char file_size[256];
 	int offset;
 	int sent_bytes = 0;
- 	int remain_data;
 
 	// Open file
 	verification_fd = open(file, O_RDONLY);
@@ -36,12 +36,13 @@ void receive_file(char *file, int client_socket)
 
 void send_file(char *file, int client_socket)
 {
-	int fd;
+	int fd, verification_fd;
 	struct stat file_stat;
 	ssize_t len;
+	int remain_data;
+	char file_size[256];
 	int offset;
 	int sent_bytes = 0;
- 	int remain_data;
 
 	// Open file
 	fd = open(file, O_RDONLY);
@@ -58,18 +59,19 @@ void send_file(char *file, int client_socket)
 		exit(EXIT_FAILURE);
 	}
 
-	// Send file name before the data, so the client knows witch file should be created or updated
-	len = send(client_socket, file, sizeof(file), 0);
+	// Send file size
+	remain_data = file_stat.st_size;
+	itoa(remain_data, file_size, 10);
+	len = send(client_socket, file_size, sizeof(file_size), 0);
 	if (len < 0)
 	{
-		printf("Error on sending file name");
+		printf("Error on sending file size");
 		exit(EXIT_FAILURE);
 	}
-	printf("Server sent %d bytes for the file name\n", len);
+	printf("Server sent %d bytes for the file size\n", len);
 
 	// Send file data
 	offset = 0;
-	remain_data = file_stat.st_size;
 	while (((sent_bytes = sendfile(client_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0))
 	{
 		remain_data -= sent_bytes;
