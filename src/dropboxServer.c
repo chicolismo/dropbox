@@ -4,7 +4,7 @@
 
 void receive_file(char *file, int client_socket)
 {
-	/*int fd;
+	int fd, verification_fd;
 	struct stat file_stat;
 	ssize_t len;
 	char file_size[256];
@@ -13,37 +13,25 @@ void receive_file(char *file, int client_socket)
  	int remain_data;
 
 	// Open file
-	fd = open(file, O_WRONLY);
+	verification_fd = open(file, O_RDONLY);
+	if (verification_fd == -1)
+    {
+		// File doesn't exist yet, it must be created
+		fd = open(file, O_CREAT, S_IRUSR); // | S_IWUSR | S_IXUSR);
+    }
+	else
+	{
+		// File already exist
+		fd = open(file, O_APPEND);
+	}
 	if (fd == -1)
     {
 		printf("Error opening file");
 		exit(EXIT_FAILURE);
     }
 
-	// Get file stats
-	if (fstat(fd, &file_stat) < 0)
-	{
-		printf("Error fstat");
-		exit(EXIT_FAILURE);
-	}
-
-	// Send file size
-	len = send(client_socket, file_size, sizeof(file_size), 0);
-	if (len < 0)
-	{
-		printf("Error on sending file size");
-		exit(EXIT_FAILURE);
-	}
-	printf("Server sent %d bytes for the size\n", len);
-
-	// Send file data
-	offset = 0;
-	remain_data = file_stat.st_size;
-	while (((sent_bytes = sendfile(client_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0))
-	{
-		remain_data -= sent_bytes;
-		printf("Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-	}*/
+	// Receive file data
+	// TODO
 }
 
 void send_file(char *file, int client_socket)
@@ -51,7 +39,6 @@ void send_file(char *file, int client_socket)
 	int fd;
 	struct stat file_stat;
 	ssize_t len;
-	char file_size[256];
 	int offset;
 	int sent_bytes = 0;
  	int remain_data;
@@ -71,7 +58,7 @@ void send_file(char *file, int client_socket)
 		exit(EXIT_FAILURE);
 	}
 
-	// Send file name
+	// Send file name before the data, so the client knows witch file should be created or updated
 	len = send(client_socket, file, sizeof(file), 0);
 	if (len < 0)
 	{
@@ -79,15 +66,6 @@ void send_file(char *file, int client_socket)
 		exit(EXIT_FAILURE);
 	}
 	printf("Server sent %d bytes for the file name\n", len);
-
-	// Send file size
-	len = send(client_socket, file_size, sizeof(file_size), 0);
-	if (len < 0)
-	{
-		printf("Error on sending file size");
-		exit(EXIT_FAILURE);
-	}
-	printf("Server sent %d bytes for the size\n", len);
 
 	// Send file data
 	offset = 0;
