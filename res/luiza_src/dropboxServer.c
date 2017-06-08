@@ -105,6 +105,85 @@ void run_thread(void *socket_client)
 	close(socketfd);
 }
 
+void sync_server()
+{
+	struct client client_mirror;
+	struct file_info *fi;
+	
+	//server fica esperando o cliente enviar seu mirror
+	//TODO: VER SE NÃO É MELHOR O SERVER RECEBER ISSO LOGO QUE ENTRA A THREAD?
+	recv(socketfd, client_mirror, sizeof(struct client), 0);
+
+	char[256] home = "/home/";
+	strcat(home, getlogin());
+	strcat(home, "/server");
+
+	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
+	client *client;
+	update_client(client, home);
+  
+  	// pra cada arquivo do cliente:
+  	int i;
+  	for(i = 0; i < MAXFILES; i++) 
+    {
+      	if(strcmp(client_mirror.fileinfo[i].name, "") == 0)
+           break;
+    	else
+        {
+        	// arquivo existe no servidor?
+			*fi = search_files(client, client_mirror.fileinfo[i].name);
+
+			if(fi != NULL)		// arquivo existe no servidor
+			{
+				//verifica se o arquivo no cliente tem commit_created/modified > state do servidor.
+				if(client_mirror.fileinfo[i].commit_modified > client->current_commit)
+				{
+					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
+					// pede para o cliente mandar o arquivo
+					////TODO: definir qual a mensagem que vai ser mandada
+					send(socketfd, "sendfile#fname", 14, 0);
+					
+					struct file_info f;
+					//fica esperando receber struct
+					recv(socketfd, f, sizeof(struct file_info);
+				
+					//recebe arquivo
+					//TODO
+
+					// atualiza na estrutura do cliente no servidor.
+					*fi = f;
+				}
+			}
+			else				// arquivo não existe no cliente
+			{
+				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
+				if(client_mirror.fileinfo[i].commit_modified > client->current_commit)
+				{
+					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
+					// pede para o servidor mandar o arquivo
+					//TODO: definir qual a mensagem que vai ser mandada
+					send(socketfd, "sendfile#fname", 14, 0);
+
+					struct file_info f;
+					//fica esperando receber struct
+					recv(socketfd, f, sizeof(struct file_info);
+				
+					//recebe arquivo
+					//TODO
+
+					//bota f na estrutura self
+					//TODO
+					insert_file_into_client_list(client, f);
+				}
+			}
+        }
+    }
+
+	//avança o estado de commit do cliente.
+	client->current_commit += 1;
+}
+
+
 int main(int argc, char *argv[])
 {
 	int socket_connection, socket_client;

@@ -32,7 +32,11 @@ int connect_server(char *host, int port)
 void sync_client()
 {
 	struct client server_mirror;
-	struct file_info fi;
+	struct file_info *fi;
+	
+	char[256] home = "/home/";
+	strcat(home, getlogin());
+	update_client(&self, home);
 	
 	// envia para o servidor o seu login
 	send(socketfd, self.userid, sizeof(self.userid), 0);
@@ -75,9 +79,9 @@ void sync_client()
 			else				// arquivo não existe no cliente
 			{
 				// verifica se o arquivo no servidor tem um commit_modified > state do cliente
-				if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
+				if(server_mirror.fileinfo[i].commit_modified >= self.current_commit)
 				{
-					//isso quer dizer que é um arquivo novo recebido.
+					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o servidor mandar o arquivo
 					//TODO: definir qual a mensagem que vai ser mandada
 					send(socketfd, "sendfile#fname", 14, 0);
@@ -92,6 +96,12 @@ void sync_client()
 					//bota f na estrutura self
 					//TODO
 					insert_file_into_client_list(&self, f);
+				}
+				else
+				{
+					// o arquivo é velho e deve ser deletado do servidor adequadamente.
+					//TODO: definir o comando de deleção.
+
 				}
 			}
         }
@@ -116,7 +126,9 @@ int main(int argc, char *argv[])
 	strcat(home, getlogin());
 	
 	//inicializa estrutura self do cliente
-	self = map_sync_dir(home, argv[1]);
+	strcpy(self.userid,argv[1]);
+	self.
+	self = update_client(&self, home);
 
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
