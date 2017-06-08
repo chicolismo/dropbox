@@ -29,8 +29,6 @@ int connect_server(char *host, int port)
 	return socketfd;
 }
 
-
-
 void sync_client()
 {
 	struct client server_mirror;
@@ -60,6 +58,7 @@ void sync_client()
 				{
 					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 					// pede para o servidor mandar o arquivo
+					////TODO: definir qual a mensagem que vai ser mandada
 					send(socketfd, "sendfile#fname", 14, 0);
 					
 					struct file_info f;
@@ -67,6 +66,7 @@ void sync_client()
 					recv(socketfd, f, sizeof(struct file_info);
 				
 					//recebe arquivo
+					//TODO
 
 					// atualiza na estrutura do cliente.
 					*fi = f;
@@ -79,6 +79,7 @@ void sync_client()
 				{
 					//isso quer dizer que é um arquivo novo recebido.
 					// pede para o servidor mandar o arquivo
+					//TODO: definir qual a mensagem que vai ser mandada
 					send(socketfd, "sendfile#fname", 14, 0);
 
 					struct file_info f;
@@ -91,6 +92,7 @@ void sync_client()
 					//bota f na estrutura self
 					//TODO
 					insert_file_into_client_list(&self, f);
+				}
 			}
         }
     }
