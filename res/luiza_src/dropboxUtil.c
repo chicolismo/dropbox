@@ -85,11 +85,29 @@ void update_client(client *client, char *home)
 
 		  	struct stat attrib;
 		  	stat(fullpath, &attrib);
-		  	strftime(fi.last_modified, MAXNAME, "%d-%m-%y", gmtime(&(attrib.st_ctime)));
+		  	strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", gmtime(&(attrib.st_mtime)));
 		  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
 		  	fi.size = attrib.st_siz;
 
-		  	self.fileinfo[i] = fi;
+			//leitura do arquivo está sendo feita neste commit. colocar o commit atual do cliente no arquivo
+
+			fi.commit_modified = client->current_commit;
+
+			file_info *f = search_files(client, name);
+			if(f != NULL)
+			{
+				// arquivo já existe na estrutura
+				// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
+				if(file_more_recent_than(fi, f))
+				{
+					
+				}
+			}
+			else
+			{
+				//arquivo não está na estrutura, adicionar.
+				insert_file_into_client_list(client, fi);
+			}
 		  	i++;
 	  }
 	  closedir(d);
@@ -135,6 +153,74 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 				client->fileinfo[i+1].name = "";
 			}
 			break;
+		}
+	}
+}
+
+// retorna 1 se f1 é mais recente que f2. retorna 0  caso contrário
+int file_more_recent_than(file_info f1, file_info f2)
+{
+	/* DATE FORMAT
+		"%d-%m-%Y-%H-%M-%S"
+		31-01-2001-13-14-23
+	*/
+
+	//copia strings pra não serem destruídas pelo strtok caso seja por ref.
+	char *f1_lm, *f2_lm;
+	strcpy(f1_lm, f1->last_modified);
+	strcpy(f2_lm, f2->last_modified);
+
+	int f1_day = atoi(strtok(f1_lm, "-"));
+	int f1_month = atoi(strtok(NULL, "-"));
+	int f1_year = atoi(strtok(NULL, "-"));
+	int f1_hour = atoi(strtok(NULL, "-"));
+	int f1_minutes = atoi(strtok(NULL, "-"));
+	int f1_seconds = atoi(strtok(NULL, "-"));
+
+	int f2_day = atoi(strtok(f2_lm, "-"));
+	int f2_month = atoi(strtok(NULL, "-"));
+	int f2_year = atoi(strtok(NULL, "-"));
+	int f2_hour = atoi(strtok(NULL, "-"));
+	int f2_minutes = atoi(strtok(NULL, "-"));
+	int f2_seconds = atoi(strtok(NULL, "-"));
+
+	if(f1_year > f2_year)
+		return 1;
+	else if (f2_year > f1_year)
+		return 0;
+	else
+	{
+		if(f1_month > f2_month)
+			return 1;
+		else if (f2_month > f1_month)
+			return 0;
+		else
+		{
+			if(f1_day > f2_day)
+				return 1;
+			else if(f2_day > f1_day)
+				return 0;
+			else 
+			{
+				if(f1_hour > f2_hour)
+					return 1;
+				else if(f2_hour > f1_hour)
+					return 0;
+				else
+				{
+					if(f1_minutes > f2_minutes)
+						return 1;
+					else if(f2_minutes > f1_minutes)
+						return 0;
+					else 
+					{
+						if(f1_seconds > f2_seconds)
+							return 1;
+						else
+							return 0;
+					}
+				}
+			}
 		}
 	}
 }
