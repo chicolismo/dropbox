@@ -22,4 +22,5 @@ struct client {
 } client;
 
 client map_sync_dir(char *home, char *login);
-file_info search_files(client *client, char filename[MAXNAME]);
+file_info* search_files(client *client, char filename[MAXNAME]);
+void insert_file_into_client_list(client *client, file_info fileinfo);
