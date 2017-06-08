@@ -27,7 +27,7 @@ void insert_client(client clientinfo){
 				if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
 					return NOT_VALID;	
 				else{
-					devices[1] = 1;
+					tempinfo->devices[1] = 1;
 					return ACCEPTED;
 				}
 			}
@@ -36,11 +36,13 @@ void insert_client(client clientinfo){
 	}
 	else{ //fila vazia pode inserir
 		AppendFila2(connected_clients, (void*)clientinfo);
+		tempinfo->devices[0] = 1;
 		return ACCEPTED;
 	}
 	
 	//nao achou cliente na fila, insere no fim
 	AppendFila2(connected_clients, (void*)clientinfo);
+	tempinfo->devices[0] = 1;
 	
 	pthread_mutex_unlock(&queue);
 }
