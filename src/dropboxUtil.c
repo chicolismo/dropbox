@@ -1,5 +1,39 @@
 #include "../include/dropboxUtil.h"
 
+int file_size(FILE *file){
+	int size = -1;
+	long int current_position;
+
+	if(file) {
+		current_position = ftell(file);
+		fseek(file, 0L, SEEK_END);
+		size = ftell(file);
+		fseek(file, current_position, SEEK_SET);
+    }
+
+	return size;
+}
+
+int write_file(char* file_name, int socket){
+	int i;
+	long int size = -1;
+	unsigned char *sizeBuffer;
+	char buffer;
+
+	// Faz a leitura do tamanho do arquivo, convertendo para int
+	sizeBuffer = (unsigned char*)&size;
+	if(read(socket, sizeBuffer, 4) > 0) {
+		FILE* file = fopen(file_name, "w+");
+
+		for(i=0; i<size; i++){
+			read(socket, (void*)&buffer, 1);
+			fputc(buffer, file);
+		}
+		fclose(file);
+	}
+	return size;
+}
+
 client map_sync_dir(char *home, char *login) 
 {
 	struct client c;

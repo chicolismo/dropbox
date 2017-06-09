@@ -3,6 +3,56 @@
 
 struct client self;
 
+void get_file(char* file, int server_socket){
+    char buffer[256];
+
+	// Chama funcao que escreve arquivo
+    if(write_file(file, server_socket) < 0){
+        printf("ERROR on openning file: file doesn't exist.\n");
+    }
+    else {
+		strcpy(buffer, "SUCCESS: file received.\n");
+        write(server_socket, buffer, sizeof(buffer));
+        printf("File %s downloaded.\n", file);
+    }
+}
+
+void send_file(char *file, int server_socket) {
+	FILE *fp;
+	int offset;
+	long int size;
+	char buffer, server_answer[256];
+	unsigned char* bufferSize;
+
+	if(!(fp = fopen(file, "r"))) {
+		printf("ERROR on openning file: file doesn't exist.\n");
+	} else {
+		size = file_size(fp);
+		bufferSize = (unsigned char*) &size;
+
+		// Se enviar o tamanho do arquivo
+		if(write(server_socket, (void*)bufferSize, 4) > 0) {
+			// Prepara envio do arquivo
+			offset = 0;
+			while(offset < size) {
+				buffer = fgetc(fp);
+				// Envia 1 byte do arquivo
+				if(write(server_socket, (void*)&buffer, 1) < 0)
+					break;
+				offset++;
+			}
+		}
+
+		printf("File %s uploaded.\n", file);
+		fclose(fp);
+
+		read(server_socket, server_answer, 256);
+		printf("Server: %s\n", server_answer);
+	}
+}
+
+
+
 int connect_server(char *host, int port)
 {
 	int socketfd;

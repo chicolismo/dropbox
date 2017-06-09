@@ -26,5 +26,7 @@ struct client {
 	int logged_in;
 } client;
 
+int file_size(FILE *file);
+int write_file(char* file_name, int socket);
 client map_sync_dir(char *home, char *login);
 file_info search_files(client *client, char filename[MAXNAME]);
