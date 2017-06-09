@@ -83,16 +83,17 @@ void run_thread(void *socket_client)
 {
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_client;
-	int message;
+	char message;
 	printf("i created a thread\n");
 	
-
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, BUFFER_SIZE);
 		if (message < 0) 
 			printf("ERROR reading from socket");
-		else {					
+		else {
+			memcpy(&message, buffer, 1);
+
 			//nao sei se é exatamente assim
 			switch(message){
 				case EXIT:
@@ -104,13 +105,12 @@ void run_thread(void *socket_client)
 						char client_id[MAXNAME];
 						//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
 						//pegar os dados do buffer
-						n = read(socket, buffer, BUFFER_SIZE);
+						read(socketfd, buffer, BUFFER_SIZE);
 						memcpy(client_id, buffer, MAXNAME);
 						
 						bzero(buffer,BUFFER_SIZE);
 
 						// pega cliente na lista de clientes e envia o mirror para o cliente.
-
 
 						memcpy(buffer, &client, sizeof(client));
 						write(socketfd, buffer, BUFFER_SIZE);
@@ -123,17 +123,21 @@ void run_thread(void *socket_client)
 							char command;
 							char fname[MAXNAME];
 
-							read(socket, buffer, BUFFER_SIZE);
+							read(socketfd, buffer, BUFFER_SIZE);
 							memcpy(&command, buffer, 1);
 
 							if(command == DOWNLOAD)
 							{
+								bzero(buffer,BUFFER_SIZE);
+
 								// recebe nome do arquivo
-								read(socket, buffer, BUFFER_SIZE);
+								read(socketfd, buffer, BUFFER_SIZE);
 								memcpy(fname, buffer, MAXNAME);
 								
 								// procura arquivo
 								file_info *f = search_files(client, fname);
+
+								bzero(buffer,BUFFER_SIZE);
 
 								// manda struct
 								memcpy(buffer, &f, sizeof(file_info));
@@ -143,9 +147,10 @@ void run_thread(void *socket_client)
 							}
 							else if(command == DELETE)
 							{
+								bzero(buffer,BUFFER_SIZE);
+
 								// recebe nome do arquivo
-								// recebe nome do arquivo
-								n = read(socket, buffer, BUFFER_SIZE);
+								read(socketfd, buffer, BUFFER_SIZE);
 								memcpy(fname, buffer, MAXNAME);
 
 								// procura arquivo
@@ -158,8 +163,8 @@ void run_thread(void *socket_client)
 								break;
 						}
 						
-						// aí executa aqui o sync_server?	
-
+						// aí executa aqui o sync_server.
+						sync_server(socketfd);	
 					}
 					break;
 				case DOWNLOAD:
@@ -181,14 +186,18 @@ void run_thread(void *socket_client)
 	close(socketfd);
 }
 
-void sync_server()
+void sync_server(int socketfd)
 {
 	struct client client_mirror;
 	struct file_info *fi;
+
+	char buffer[BUFFER_SIZE];
 	
 	//server fica esperando o cliente enviar seu mirror
-	//TODO: VER SE NÃO É MELHOR O SERVER RECEBER ISSO LOGO QUE ENTRA A THREAD?
-	recv(socketfd, client_mirror, sizeof(struct client), 0);
+	read(socketfd, buffer, BUFFER_SIZE);
+	memcpy(&client_mirror, buffer, sizeof(struct client));
+	
+	bzero(buffer,BUFFER_SIZE);
 
 	char[256] home = "/home/";
 	strcat(home, getlogin());
@@ -216,12 +225,20 @@ void sync_server()
 				{
 					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 					// pede para o cliente mandar o arquivo
-					////TODO: definir qual a mensagem que vai ser mandada
-					send(socketfd, "sendfile#fname", 14, 0);
-					
+					memcpy(buffer, DOWNLOAD, 1);
+					write(socketfd, buffer, BUFFER_SIZE);
+
+					bzero(buffer,BUFFER_SIZE);
+
+					memcpy(buffer, &client_mirror.fileinfo[i].name, MAXNAME);
+					write(socketfd, buffer, BUFFER_SIZE);
+		
+					bzero(buffer,BUFFER_SIZE);
+
 					struct file_info f;
 					//fica esperando receber struct
-					recv(socketfd, f, sizeof(struct file_info);
+					read(socketfd, buffer, BUFFER_SIZE);
+					memcpy(&f, buffer, sizeof(struct file_info));
 				
 					//recebe arquivo
 					//TODO
@@ -230,15 +247,20 @@ void sync_server()
 					*fi = f;
 				}
 			}
-			else				// arquivo não existe no cliente
+			else				// arquivo não existe no servidor
 			{
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
 				if(client_mirror.fileinfo[i].commit_modified > client->current_commit)
 				{
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
-					// pede para o servidor mandar o arquivo
-					//TODO: definir qual a mensagem que vai ser mandada
-					send(socketfd, "sendfile#fname", 14, 0);
+					// pede para o cliente mandar o arquivo
+					memcpy(buffer, DOWNLOAD, 1);
+					write(socketfd, buffer, BUFFER_SIZE);
+
+					bzero(buffer,BUFFER_SIZE);
+
+					memcpy(buffer, &client_mirror.fileinfo[i].name, MAXNAME);
+					write(socketfd, buffer, BUFFER_SIZE);
 
 					struct file_info f;
 					//fica esperando receber struct
