@@ -24,6 +24,8 @@ void init_client(client *client, char *home, char *login)
 	client->logged_in = 1;
 	client->current_commit = 0;
 	client->devices[0] = 1;
+
+	update_client(client, home);
 }
 
 void update_client(client *client, char *home)

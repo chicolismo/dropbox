@@ -38,7 +38,11 @@ void sync_client()
 	strcat(home, getlogin());
 	update_client(&self, home);
 	
+	// envia para o servidor que ele vai começar o sync.
+	send(socketfd, SYNC, 1, 0);
+
 	// envia para o servidor o seu login
+	//NÃO É MELHOR ELE ENVIAR ISSO UMA VEZ NO INICIO E O SERVER GUARDAR???
 	send(socketfd, self.userid, sizeof(self.userid), 0);
 
   	// fica esperando o servidor enviar sua estrutura deste client.
@@ -62,8 +66,8 @@ void sync_client()
 				{
 					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 					// pede para o servidor mandar o arquivo
-					////TODO: definir qual a mensagem que vai ser mandada
-					send(socketfd, "sendfile#fname", 14, 0);
+					send(socketfd, DOWNLOAD, 1, 0);
+					send(server_mirror.fileinfo[i].name, MAXNAME, 0);
 					
 					struct file_info f;
 					//fica esperando receber struct
@@ -83,8 +87,8 @@ void sync_client()
 				{
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o servidor mandar o arquivo
-					//TODO: definir qual a mensagem que vai ser mandada
-					send(socketfd, "sendfile#fname", 14, 0);
+					send(socketfd, DOWNLOAD, 1, 0);
+					send(server_mirror.fileinfo[i].name, MAXNAME, 0);
 
 					struct file_info f;
 					//fica esperando receber struct
@@ -94,21 +98,23 @@ void sync_client()
 					//TODO
 
 					//bota f na estrutura self
-					//TODO
 					insert_file_into_client_list(&self, f);
 				}
 				else
 				{
 					// o arquivo é velho e deve ser deletado do servidor adequadamente.
-					//TODO: definir o comando de deleção.
-
+					send(socketfd, DELETE, 1, 0);
+					send(server_mirror.fileinfo[i].name, MAXNAME, 0);
 				}
 			}
         }
     }
 
 	//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
-	self.current_commit = server_mirror.current_commit;
+	if(self.current_commit < server_mirror.current_commit)
+		self.current_commit = server_mirror.current_commit + 1;
+	else
+		self.current_commit += 1;
 }
 
 int main(int argc, char *argv[])
@@ -125,13 +131,13 @@ int main(int argc, char *argv[])
 	char[256] home = "/home/";
 	strcat(home, getlogin());
 	
-	self = update_client(&self, home);
+	init_client(&self, home, argv[1]);
 
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
 
-	//send to server
-	send(socketfd, self, sizeof(struct client), 0);
+	//send userid to server
+	send(socketfd, self.userid, MAXNAME, 0);
 
 	// dispara nova thread pra fazer o sync_client
 	// SOCORRO???? COMO QUE FICA DO LADO DO SERVIDOR???
