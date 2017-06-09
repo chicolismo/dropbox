@@ -115,73 +115,6 @@ void run_thread(void *socket_client)
 					disconnect_client(client);
 					pthread_exit();
 					break;
-				case SYNC:			// SERVER RECEBE SYNC -> CLIENT ESTÁ FAZENDO SYNC. 
-					{
-						char client_id[MAXNAME];
-						//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
-						//pegar os dados do buffer
-						read(socketfd, buffer, BUFFER_SIZE);
-						memcpy(client_id, buffer, MAXNAME);
-						
-						bzero(buffer,BUFFER_SIZE);
-
-						// pega cliente na lista de clientes e envia o mirror para o cliente.
-
-						memcpy(buffer, &client, sizeof(client));
-						write(socketfd, buffer, BUFFER_SIZE);
-
-						// agora fica em um while !finished, fica recebendo comandos de download/delete
-						while(1)
-						{	
-							bzero(buffer,BUFFER_SIZE);
-
-							char command;
-							char fname[MAXNAME];
-
-							read(socketfd, buffer, BUFFER_SIZE);
-							memcpy(&command, buffer, 1);
-
-							if(command == DOWNLOAD)
-							{
-								bzero(buffer,BUFFER_SIZE);
-
-								// recebe nome do arquivo
-								read(socketfd, buffer, BUFFER_SIZE);
-								memcpy(fname, buffer, MAXNAME);
-								
-								// procura arquivo
-								file_info *f = search_files(client, fname);
-
-								bzero(buffer,BUFFER_SIZE);
-
-								// manda struct
-								memcpy(buffer, &f, sizeof(file_info));
-								write(socketfd, buffer, BUFFER_SIZE);
-								
-								// manda arquivo
-							}
-							else if(command == DELETE)
-							{
-								bzero(buffer,BUFFER_SIZE);
-
-								// recebe nome do arquivo
-								read(socketfd, buffer, BUFFER_SIZE);
-								memcpy(fname, buffer, MAXNAME);
-
-								// procura arquivo
-
-								// deleta arquivo da pasta sync do server
-
-								// deleta estrutura da lista de arquivos do cliente
-							}
-							else
-								break;
-						}
-						
-						// aí executa aqui o sync_server.
-						sync_server(socketfd);	
-					}
-					break;
 				case DOWNLOAD:
 					//tem que ver como vamos receber isso...
 					message = read(socketfd, buffer, BUFFER_SIZE);
@@ -193,12 +126,99 @@ void run_thread(void *socket_client)
 					break;
 			}
 		}
-		
 	}
 
 	free(socket_client);
 
 	close(socketfd);
+}
+
+void run_sync(void *socket_sync)
+{
+	char buffer[BUFFER_SIZE];
+	int socketfd = *(int*)socket_client;
+	char message;
+
+	char message;
+	printf("i created a thread\n");
+	
+	while(1) {
+		bzero(buffer, BUFFER_SIZE);
+
+		message = read(socketfd, buffer, BUFFER_SIZE);
+
+		if (message < 0) 
+			printf("ERROR reading from socket");
+		else 
+		{
+			memcpy(&message, buffer, 1);
+
+			if(message == SYNC)
+			{
+				char client_id[MAXNAME];
+				//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
+				//pegar os dados do buffer
+				read(socketfd, buffer, BUFFER_SIZE);
+				memcpy(client_id, buffer, MAXNAME);
+				
+				bzero(buffer,BUFFER_SIZE);
+
+				// pega cliente na lista de clientes e envia o mirror para o cliente.
+
+				memcpy(buffer, &client, sizeof(client));
+				write(socketfd, buffer, BUFFER_SIZE);
+
+				// agora fica em um while !finished, fica recebendo comandos de download/delete
+				while(1)
+				{	
+					bzero(buffer,BUFFER_SIZE);
+
+					char command;
+					char fname[MAXNAME];
+
+					read(socketfd, buffer, BUFFER_SIZE);
+					memcpy(&command, buffer, 1);
+
+					if(command == DOWNLOAD)
+					{
+						bzero(buffer,BUFFER_SIZE);
+
+						// recebe nome do arquivo
+						read(socketfd, buffer, BUFFER_SIZE);
+						memcpy(fname, buffer, MAXNAME);
+						
+						// procura arquivo
+						file_info *f = search_files(client, fname);
+
+						bzero(buffer,BUFFER_SIZE);
+
+						// manda struct
+						memcpy(buffer, &f, sizeof(file_info));
+						write(socketfd, buffer, BUFFER_SIZE);
+						
+						// manda arquivo
+					}
+					else if(command == DELETE)
+					{
+						bzero(buffer,BUFFER_SIZE);
+
+						// recebe nome do arquivo
+						read(socketfd, buffer, BUFFER_SIZE);
+						memcpy(fname, buffer, MAXNAME);
+
+						// procura arquivo
+
+						// deleta arquivo da pasta sync do server
+
+						// deleta estrutura da lista de arquivos do cliente
+					}
+					else
+						break;
+				}
+				
+				// aí executa aqui o sync_server.
+				sync_server(socketfd);
+			}
 }
 
 void sync_server(int socketfd)

@@ -42,92 +42,103 @@ int connect_server(char *host, int port)
 	return socketfd;
 }
 
-void sync_client()
+//VIROU A FUNÇÃO DA THREAD SEPARADA DO DAEMON
+void sync_client(*(int*)socket_sync)
 {
-	struct client server_mirror;
-	struct file_info *fi;
 	
-	char[256] home = "/home/";
-	strcat(home, getlogin());
-	update_client(&self, home);
+	char buffer[BUFFER_SIZE];
+	int socketfd = *(int*)socket_sync;
+
+	while(1)
+	{
+		// faz isso a cada x segundos:
+		sleep(SLEEP);
+		
+		struct client server_mirror;
+		struct file_info *fi;
 	
-	// envia para o servidor que ele vai começar o sync.
-	send(socketfd, SYNC, 1, 0);
+		char[256] home = "/home/";
+		strcat(home, getlogin());
+		update_client(&self, home);
+	
+		// envia para o servidor que ele vai começar o sync.
+		send(socketfd, SYNC, 1, 0);
 
-	// envia para o servidor o seu login
-	//NÃO É MELHOR ELE ENVIAR ISSO UMA VEZ NO INICIO E O SERVER GUARDAR???
-	send(socketfd, self.userid, sizeof(self.userid), 0);
+		// envia para o servidor o seu login
+		//NÃO É MELHOR ELE ENVIAR ISSO UMA VEZ NO INICIO E O SERVER GUARDAR???
+		send(socketfd, self.userid, sizeof(self.userid), 0);
 
-  	// fica esperando o servidor enviar sua estrutura deste client.
-    recv(socketfd, server_mirror, sizeof(struct client), 0);
-  
-  	// pra cada arquivo do servidor:
-  	int i;
-  	for(i = 0; i < MAXFILES; i++) 
-    {
-      	if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
-           break;
-    	else
-        {
-        	// arquivo existe no cliente?
-			*fi = search_files(&self, server_mirror.fileinfo[i].name);
+	  	// fica esperando o servidor enviar sua estrutura deste client.
+		recv(socketfd, server_mirror, sizeof(struct client), 0);
+	  
+	  	// pra cada arquivo do servidor:
+	  	int i;
+	  	for(i = 0; i < MAXFILES; i++) 
+		{
+		  	if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
+		       break;
+			else
+		    {
+		    	// arquivo existe no cliente?
+				*fi = search_files(&self, server_mirror.fileinfo[i].name);
 
-			if(fi != NULL)		// arquivo existe no cliente
-			{
-				//verifica se o arquivo no servidor tem commit_created/modified > state do cliente.
-				if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
+				if(fi != NULL)		// arquivo existe no cliente
 				{
-					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
-					// pede para o servidor mandar o arquivo
-					send(socketfd, DOWNLOAD, 1, 0);
-					send(server_mirror.fileinfo[i].name, MAXNAME, 0);
+					//verifica se o arquivo no servidor tem commit_created/modified > state do cliente.
+					if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
+					{
+						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
+						// pede para o servidor mandar o arquivo
+						send(socketfd, DOWNLOAD, 1, 0);
+						send(server_mirror.fileinfo[i].name, MAXNAME, 0);
 					
-					struct file_info f;
-					//fica esperando receber struct
-					recv(socketfd, f, sizeof(struct file_info));
+						struct file_info f;
+						//fica esperando receber struct
+						recv(socketfd, f, sizeof(struct file_info));
 				
-					//recebe arquivo
-					//TODO
+						//recebe arquivo
+						//TODO
 
-					// atualiza na estrutura do cliente.
-					*fi = f;
+						// atualiza na estrutura do cliente.
+						*fi = f;
+					}
 				}
-			}
-			else				// arquivo não existe no cliente
-			{
-				// verifica se o arquivo no servidor tem um commit_modified > state do cliente
-				if(server_mirror.fileinfo[i].commit_modified >= self.current_commit)
+				else				// arquivo não existe no cliente
 				{
-					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
-					// pede para o servidor mandar o arquivo
-					send(socketfd, DOWNLOAD, 1, 0);
-					send(server_mirror.fileinfo[i].name, MAXNAME, 0);
+					// verifica se o arquivo no servidor tem um commit_modified > state do cliente
+					if(server_mirror.fileinfo[i].commit_modified >= self.current_commit)
+					{
+						//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
+						// pede para o servidor mandar o arquivo
+						send(socketfd, DOWNLOAD, 1, 0);
+						send(server_mirror.fileinfo[i].name, MAXNAME, 0);
 
-					struct file_info f;
-					//fica esperando receber struct
-					recv(socketfd, f, sizeof(struct file_info);
+						struct file_info f;
+						//fica esperando receber struct
+						recv(socketfd, f, sizeof(struct file_info);
 				
-					//recebe arquivo
-					//TODO
+						//recebe arquivo
+						//TODO
 
-					//bota f na estrutura self
-					insert_file_into_client_list(&self, f);
+						//bota f na estrutura self
+						insert_file_into_client_list(&self, f);
+					}
+					else
+					{
+						// o arquivo é velho e deve ser deletado do servidor adequadamente.
+						send(socketfd, DELETE, 1, 0);
+						send(server_mirror.fileinfo[i].name, MAXNAME, 0);
+					}
 				}
-				else
-				{
-					// o arquivo é velho e deve ser deletado do servidor adequadamente.
-					send(socketfd, DELETE, 1, 0);
-					send(server_mirror.fileinfo[i].name, MAXNAME, 0);
-				}
-			}
-        }
-    }
+		    }
+		}
 
-	//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
-	if(self.current_commit < server_mirror.current_commit)
-		self.current_commit = server_mirror.current_commit + 1;
-	else
-		self.current_commit += 1;
+		//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
+		if(self.current_commit < server_mirror.current_commit)
+			self.current_commit = server_mirror.current_commit + 1;
+		else
+			self.current_commit += 1;
+	}
 }
 
 int main(int argc, char *argv[])
@@ -155,12 +166,13 @@ int main(int argc, char *argv[])
 
 	// recebe um ok do servidor para continuar a conexão
 
+	// conecta um novo socket na porta +1 para fazer o sync apenas sem bloquear o programa de comandos.
+	sync_socketfd = connect_server(argv[2], atoi(argv[3]));
+
 	// dispara nova thread pra fazer o sync_client
-	// SOCORRO???? COMO QUE FICA DO LADO DO SERVIDOR???
 	pthread_t initial_sync_client;
 	pthread_create(&initial_sync_client, NULL, sync_client, (void *)&sync_socketfd);
 	pthread_detach(initial_sync_client);
-	//	sync_client();
     
 
 	// REVER ISSO
@@ -175,11 +187,6 @@ int main(int argc, char *argv[])
 				case EXIT:
 					disconnect_client(client);
 					pthread_exit();
-					break;
-				case SYNC:			// CLIENTE RECEBE SYNC -> SERVER ESTÁ FAZENDO SYNC_SERVER.
-				{
-
-				}
 					break;
 				case DOWNLOAD:
 					//tem que ver como vamos receber isso...
