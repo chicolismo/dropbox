@@ -13,4 +13,6 @@ void disconnect_client(client clientinfo){
 		tempinfo->devices[1] = 0;
 	else //se não, remove a estrutura
 		DeleteAtIteratorFila2(connected_clients);
+		
+	pthread_mutex_unlock(&queue);
 }
