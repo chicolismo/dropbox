@@ -7,9 +7,10 @@
 
 //flags de controle
 #define EXIT 'e'
-#define SYNC_CLIENT 's'
+#define SYNC 's'
 #define DOWNLOAD 'd'
 #define UPLOAD 'u'
+#define DELETE 'x'
 
 struct file_info {
 	char name[MAXNAME];

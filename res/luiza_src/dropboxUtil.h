@@ -5,6 +5,13 @@
 #define MAXNAME 256
 #define MAXFILES 30
 
+//flags de controle
+#define EXIT 'e'
+#define SYNC 's'
+#define DOWNLOAD 'd'
+#define UPLOAD 'u'
+#define DELETE 'x'
+
 struct file_info {
 	char name[MAXNAME];
 	char extension[MAXNAME];
