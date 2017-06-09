@@ -107,8 +107,8 @@ void sync_client()
         }
     }
 
-	//avança o estado de commit do cliente.
-	self.current_commit++;
+	//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
+	self.current_commit = server_mirror.current_commit;
 }
 
 int main(int argc, char *argv[])
@@ -125,9 +125,6 @@ int main(int argc, char *argv[])
 	char[256] home = "/home/";
 	strcat(home, getlogin());
 	
-	//inicializa estrutura self do cliente
-	strcpy(self.userid,argv[1]);
-	self.
 	self = update_client(&self, home);
 
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
@@ -141,7 +138,7 @@ int main(int argc, char *argv[])
 	pthread_t initial_sync_client;
 	pthread_create(&initial_sync_client, NULL, sync_client, NULL);
 	pthread_detach(initial_sync_client);
-//	sync_client();
+	//	sync_client();
     
 	while(1) //mudar tudo aqui pro trabalho
 	{

@@ -21,7 +21,8 @@ struct client {
 	int current_commit;
 } client;
 
-client map_sync_dir(char *home, char *login);
+void init_client(client *client, char *login);
+void update_client(client *client, char *home);
 file_info* search_files(client *client, char filename[MAXNAME]);
 void insert_file_into_client_list(client *client, file_info fileinfo);
 void delete_file_from_client_list(client *client, char filename[MAXNAME]);

@@ -1,5 +1,31 @@
 #include "../include/dropboxUtil.h"
 
+void init_client(client *client, char *home, char *login)
+{
+	//inicializa estrutura self do cliente
+	strcpy(client->userid, login);
+
+	//inicializa todos os arquivos como null, preparando para a função update client
+	int i;
+	for(i = 0; i < MAXFILES; i++)
+		client->fileinfo[i] = NULL;
+	
+
+	//verifica se o diretorio sync_dir existe na home do usuario. se nao existir, cria.
+	char *sync_dir;
+	strcat(sync_dir, home)
+	strcat(sync_dir, "/sync_dir_");
+	strcat(sync_dir, login);
+
+	struct stat st = {0};
+	if (stat(sync_dir, &st) == -1)
+		  mkdir(home, 0700);
+
+	client->logged_in = 1;
+	client->current_commit = 0;
+	client->devices[0] = 1;
+}
+
 void update_client(client *client, char *home)
 {
 	//setup do nome do diretório em que ele precisa procurar.
@@ -70,9 +96,7 @@ file_info* search_files(client *client, char filename[MAXNAME])
 	int i;
 	for(i = 0; i < MAXFILES; i++)
 	{
-		if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
-			break;
-		else
+		if(client->fileinfo[i] != NULL)
 		{
 			if(strcmp(filename, client->fileinfo[i].name) == 0)
 				return &(client->fileinfo[i]);
@@ -86,20 +110,10 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 	int i;
 	for(i = 0; i < MAXFILES; i++)
 	{
-		if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
+		// bota na primeira posição livre que achar.
+		if(client->fileinfo[i] == NULL)
 		{
-			//achou o fim da lista.
-			if(i == MAXFILES-1)
-			{
-				//se é a última posição possível, só colocar o arquivo na última posição e fim de papo
-				client->fileinfo[i] = fileinfo;
-			}
-			else
-			{
-				//ainda há posições disponíveis. é preciso marcar o fim da lista com a string vazia.
-				client->fileinfo[i] = fileinfo;
-				client->fileinfo[i+1].name = "";
-			}
+			client->fileinfo[i] = fileinfo;
 			break;
 		}
 	}
@@ -107,7 +121,8 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 
 void delete_file_from_client_list(client *client, char filename[MAXNAME])
 {
-	return;
+	file_info *f = search_files(client, filename);
+	*f = NULL;
 }
 
 // retorna 1 se f1 é mais recente que f2. retorna 0  caso contrário
