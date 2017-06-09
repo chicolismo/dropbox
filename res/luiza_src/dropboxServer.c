@@ -92,10 +92,86 @@ void run_thread(void *socket_client)
 		message = read(socketfd, buffer, BUFFER_SIZE);
 		if (message < 0) 
 			printf("ERROR reading from socket");
-		else {
-			printf("Here is the message: %s\n", buffer);
-			// write
-			message = write(socketfd,"I got your message", 18);
+		else {					
+			//nao sei se é exatamente assim
+			switch(message){
+				case EXIT:
+					disconnect_client(client);
+					pthread_exit();
+					break;
+				case SYNC:			// SERVER RECEBE SYNC -> CLIENT ESTÁ FAZENDO SYNC. 
+					{
+						char client_id[MAXNAME];
+						//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
+						//pegar os dados do buffer
+						n = read(socket, buffer, BUFFER_SIZE);
+						memcpy(client_id, buffer, MAXNAME);
+						
+						bzero(buffer,BUFFER_SIZE);
+
+						// pega cliente na lista de clientes e envia o mirror para o cliente.
+
+
+						memcpy(buffer, &client, sizeof(client));
+						write(socketfd, buffer, BUFFER_SIZE);
+
+						// agora fica em um while !finished, fica recebendo comandos de download/delete
+						while(1)
+						{	
+							bzero(buffer,BUFFER_SIZE);
+
+							char command;
+							char fname[MAXNAME];
+
+							read(socket, buffer, BUFFER_SIZE);
+							memcpy(&command, buffer, 1);
+
+							if(command == DOWNLOAD)
+							{
+								// recebe nome do arquivo
+								read(socket, buffer, BUFFER_SIZE);
+								memcpy(fname, buffer, MAXNAME);
+								
+								// procura arquivo
+								file_info *f = search_files(client, fname);
+
+								// manda struct
+								memcpy(buffer, &f, sizeof(file_info));
+								write(socketfd, buffer, BUFFER_SIZE);
+								
+								// manda arquivo
+							}
+							else if(command == DELETE)
+							{
+								// recebe nome do arquivo
+								// recebe nome do arquivo
+								n = read(socket, buffer, BUFFER_SIZE);
+								memcpy(fname, buffer, MAXNAME);
+
+								// procura arquivo
+
+								// deleta arquivo da pasta sync
+
+								// deleta estrutura da lista
+							}
+							else
+								break;
+						}
+						
+						// aí executa aqui o sync_server?	
+
+					}
+					break;
+				case DOWNLOAD:
+					//tem que ver como vamos receber isso...
+					message = read(socketfd, buffer, BUFFER_SIZE);
+					send_file(message, socketfd);
+					break;
+				case UPLOAD:
+					message = read(socketfd, buffer, BUFFER_SIZE);
+					receive_file(message, socketfd);
+					break;
+			}
 		}
 		
 	}

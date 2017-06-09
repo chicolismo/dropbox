@@ -71,7 +71,7 @@ void sync_client()
 					
 					struct file_info f;
 					//fica esperando receber struct
-					recv(socketfd, f, sizeof(struct file_info);
+					recv(socketfd, f, sizeof(struct file_info));
 				
 					//recebe arquivo
 					//TODO
@@ -146,26 +146,37 @@ int main(int argc, char *argv[])
 	pthread_detach(initial_sync_client);
 	//	sync_client();
     
-	while(1) //mudar tudo aqui pro trabalho
-	{
-		printf("Enter the message: ");
-		bzero(buffer, BUFFER_SIZE);
-		fgets(buffer, BUFFER_SIZE, stdin);
-		
-		message = write(socketfd, buffer, strlen(buffer));
-		if (message < 0) 
-			printf("ERROR writing to socket\n");
 
-		bzero(buffer,BUFFER_SIZE);
-		
-		/* read from the socket */
+	// REVER ISSO
+	while(1) {
+		bzero(buffer, BUFFER_SIZE);
+
 		message = read(socketfd, buffer, BUFFER_SIZE);
 		if (message < 0) 
-			printf("ERROR reading from socket\n");
+			printf("ERROR reading from socket");
+		else {					
+			switch(message){
+				case EXIT:
+					disconnect_client(client);
+					pthread_exit();
+					break;
+				case SYNC:			// CLIENTE RECEBE SYNC -> SERVER ESTÁ FAZENDO SYNC_SERVER.
+				{
 
-		printf("%s\n",buffer);
+				}
+					break;
+				case DOWNLOAD:
+					//tem que ver como vamos receber isso...
+					message = read(socketfd, buffer, BUFFER_SIZE);
+					send_file(message, socketfd);
+					break;
+				case UPLOAD:
+					message = read(socketfd, buffer, BUFFER_SIZE);
+					receive_file(message, socketfd);
+					break;
+			}
+		}
 		
-		//close(socketfd);
 	}
     return 0;
 }
