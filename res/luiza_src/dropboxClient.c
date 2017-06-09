@@ -3,6 +3,19 @@
 
 struct client self;
 
+/*
+	TODO:
+		- arrumar todos os casos de enviar/receber mensagens pra ficar direitinho com memcpy e read/write
+		- criar a função separada do sync com o wait
+		- criar a conexão no socket com a porta+1
+		- NA MAIN
+			- criar o loop de pegar o input do usuário e executar o comando
+
+		DEPOIS QUE ARRUMAR ISSO TUDO:
+		- ver os mutex!
+
+*/
+
 int connect_server(char *host, int port)
 {
 	int socketfd;
@@ -121,6 +134,7 @@ int main(int argc, char *argv[])
 {
     int socketfd, message;
     char buffer[BUFFER_SIZE];
+	int sync_socketfd;
 
 	if (argc <= MIN_ARG) 
 	{
@@ -139,10 +153,12 @@ int main(int argc, char *argv[])
 	//send userid to server
 	send(socketfd, self.userid, MAXNAME, 0);
 
+	// recebe um ok do servidor para continuar a conexão
+
 	// dispara nova thread pra fazer o sync_client
 	// SOCORRO???? COMO QUE FICA DO LADO DO SERVIDOR???
 	pthread_t initial_sync_client;
-	pthread_create(&initial_sync_client, NULL, sync_client, NULL);
+	pthread_create(&initial_sync_client, NULL, sync_client, (void *)&sync_socketfd);
 	pthread_detach(initial_sync_client);
 	//	sync_client();
     

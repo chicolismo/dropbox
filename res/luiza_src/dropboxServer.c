@@ -1,6 +1,21 @@
 #include "../include/dropboxServer.h"
 #include "../include/dropboxUtil.h"
 
+/*
+	TODO:
+		- ***** URGENTE ***** ARRUMAR RECEIVE E SEND FILE  
+		- Criar outra thread/socket no servidor (com port+1) quando ele aceita o cliente e roda a run_thread
+		- separar o case de SYNC do loop da thread principal do cliente do servidor para o outra função nova
+		- arrumar todos os casos de enviar/receber mensagens pra ficar direitinho com memcpy e read/write
+		- NO SYNC_SERVER:
+			- deletar arquivo da pasta sync_dir_<user> do servidor
+			- chamar função de deletar arquivo n da estrutura do cliente
+		- @LARISSA: colocar tuas funções aqui dentro do dropboxServer.c
+		
+		DEPOIS QUE ARRUMAR ISSO TUDO:
+		- ver os mutex!
+*/
+
 
 void receive_file(char *file, int client_socket)
 {
@@ -155,9 +170,9 @@ void run_thread(void *socket_client)
 
 								// procura arquivo
 
-								// deleta arquivo da pasta sync
+								// deleta arquivo da pasta sync do server
 
-								// deleta estrutura da lista
+								// deleta estrutura da lista de arquivos do cliente
 							}
 							else
 								break;
