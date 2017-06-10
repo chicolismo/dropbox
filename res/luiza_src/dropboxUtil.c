@@ -195,3 +195,70 @@ int file_more_recent_than(file_info *f1, file_info *f2)
 	}
 }
 
+
+
+
+
+
+void receive_file(int recv_socket){
+    char buffer[256], file_name[256], char_buffer[1];
+    int error;
+    FILE *fp;
+
+    //receiving file name    
+    bzero(buffer, 256);
+    bzero(file_name, 256);
+    error = read(recv_socket, buffer, 256);
+    if (error < 0){printf("ERROR GETTING FILE NAME"); return;}
+    strncpy(file_name, buffer, strlen(buffer));
+
+    //open file
+    fp = fopen(file_name, "w");
+
+
+    bzero(char_buffer, 1);
+    read(recv_socket, char_buffer, 1);
+    //fputc(char_buffer[0], fp);
+    while(char_buffer[0] != EOF)
+    {
+        fputc(char_buffer[0], fp);
+        bzero(char_buffer, 1);
+        read(recv_socket, char_buffer, 1);
+        
+	}
+    
+}
+
+
+
+
+void send_file(char *file, int sendto_socket) {
+    char buffer[256], char_buffer, cb[1];
+    int error;
+    FILE *fp;
+
+    //sending file name
+    bzero(buffer, 256);
+    sprintf(buffer, "%s", file);
+    error = write(sendto_socket, buffer, strlen(buffer));
+    if (error < 0) {printf("ERROR writing to socket\n"); return;}
+
+    //abrir arquivo para leitura
+    fp = fopen(file, "r");
+
+    //passar char a char
+    char_buffer =  fgetc(fp);
+    while(char_buffer != EOF)
+    {    
+        bzero(cb, 1);
+        cb[0] = char_buffer;
+        write(sendto_socket, cb, 1);
+        char_buffer =  fgetc(fp);
+    }
+
+    bzero(cb, 1);
+    cb[0] = char_buffer;
+    write(sendto_socket, cb, 1);
+}
+
+
