@@ -1,5 +1,9 @@
-#include "../include/dropboxServer.h"
-#include "../include/dropboxUtil.h"
+#include "dropboxServer.h"
+#include "dropboxUtil.h"
+#include "../../include/fila.h"
+
+pthread_mutex_t queue;
+PFILA2 connected_clients;
 
 /*
 	TODO:
@@ -14,87 +18,78 @@
 */
 
 
-void receive_file(char *file, int client_socket)
-{
-	int fd, verification_fd;
-	struct stat file_stat;
-	ssize_t len;
-	int remain_data;
-	char file_size[256];
-	int offset;
-	int sent_bytes = 0;
-
-	// Open file
-	verification_fd = open(file, O_RDONLY);
-	if (verification_fd == -1)
-    {
-		// File doesn't exist yet, it must be created
-		fd = open(file, O_CREAT, S_IRUSR); // | S_IWUSR | S_IXUSR);
-    }
-	else
-	{
-		// File already exist
-		fd = open(file, O_APPEND);
+void disconnect_client(client clientinfo){
+	pthread_mutex_lock(&queue);
+	
+	client *tempinfo;
+	tempinfo = (client*)(GetAtIteratorFila2(connected_clients));
+	while(strcmp(tempinfo->userid, clientinfo.userid) != 0){
+		NextFila2(connected_clients);
+		tempinfo = (client*)(GetAtIteratorFila2(connected_clients));
 	}
-	if (fd == -1)
-    {
-		printf("Error opening file");
-		exit(EXIT_FAILURE);
-    }
-
-	// Receive file data
-	// TODO
+		
+	//se tem dois conectados, disconecta um
+	if(tempinfo->devices[1] == 1)
+		tempinfo->devices[1] = 0;
+	else //se não, remove a estrutura
+		DeleteAtIteratorFila2(connected_clients);
+		
+	pthread_mutex_unlock(&queue);
 }
 
-void send_file(char *file, int client_socket)
-{
-	int fd, verification_fd;
-	struct stat file_stat;
-	ssize_t len;
-	int remain_data;
-	char file_size[256];
-	int offset;
-	int sent_bytes = 0;
 
-	// Open file
-	fd = open(file, O_RDONLY);
-	if (fd == -1)
-    {
-		printf("Error opening file");
-		exit(EXIT_FAILURE);
-    }
 
-	// Get file stats
-	if (fstat(fd, &file_stat) < 0)
-	{
-		printf("Error fstat");
-		exit(EXIT_FAILURE);
+void insert_client(client clientinfo){
+	pthread_mutex_lock(&queue);
+	
+	//busca se já existe
+	client *tempinfo;
+	if(FirstFila2(connected_clients) != 0){
+		do{
+			tempinfo = (client*)(GetAtIteratorFila2(connected_clients));
+			if (strcmp(tempinfo->userid, clientinfo.userid) == 0){ //mesmo id = já tem um logado
+				if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
+					return NOT_VALID;	
+				else{
+					tempinfo->devices[1] = 1;
+					return ACCEPTED;
+				}
+			}
+				
+		}while(NextFila2(connected_clients) != 0);
 	}
-
-	// Send file size
-	remain_data = file_stat.st_size;
-	itoa(remain_data, file_size, 10);
-	len = send(client_socket, file_size, sizeof(file_size), 0);
-	if (len < 0)
-	{
-		printf("Error on sending file size");
-		exit(EXIT_FAILURE);
+	else{ //fila vazia pode inserir
+		AppendFila2(connected_clients, (void*)clientinfo);
+		tempinfo->devices[0] = 1;
+		return ACCEPTED;
 	}
-	printf("Server sent %d bytes for the file size\n", len);
-
-	// Send file data
-	offset = 0;
-	while (((sent_bytes = sendfile(client_socket, fd, &offset, BUFSIZ)) > 0) && (remain_data > 0))
-	{
-		remain_data -= sent_bytes;
-		printf("Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-	}
+	
+	//nao achou cliente na fila, insere no fim
+	AppendFila2(connected_clients, (void*)clientinfo);
+	tempinfo->devices[0] = 1;
+	
+	pthread_mutex_unlock(&queue);
 }
+
 
 void run_client(void *conn_info)
 {
 	connection_info ci = *(connection_info*)conn_info;
 	int socketfd = ci.socket_client;
+
+
+    //inicializa mutex da fila de clientes
+    if (pthread_mutex_init(&queue, NULL) != 0)
+    {
+        printf("\nMutex (queue) init failed\n");
+        return 1;
+    }
+
+    //inicializa fila de clientes	
+	if(CreateFila2(connected_clients) != 0){
+		printf("\nInit failed\n");
+		return 1;
+	}
 	
 	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
 	int socket_connection, socket_sync;
