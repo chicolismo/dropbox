@@ -5,9 +5,9 @@ struct client self;
 
 /*
 	TODO:
-		- arrumar todos os casos de enviar/receber mensagens pra ficar direitinho com memcpy e read/write
 		- NA MAIN
 			- criar o loop de pegar o input do usuário e executar o comando
+			- ver como fica o comando list
 
 		DEPOIS QUE ARRUMAR ISSO TUDO:
 		- ver os mutex!
@@ -60,14 +60,19 @@ void sync_client(*(int*)socket_sync)
 		update_client(&self, home);
 	
 		// envia para o servidor que ele vai começar o sync.
-		send(socketfd, SYNC, 1, 0);
+		bzero(buffer, BUFFER_SIZE);
+		memcpy(buffer, SYNC, 1);
+		write(socketfd, buffer, BUFFER_SIZE);
 
 		// envia para o servidor o seu login
-		//NÃO É MELHOR ELE ENVIAR ISSO UMA VEZ NO INICIO E O SERVER GUARDAR???
-		send(socketfd, self.userid, sizeof(self.userid), 0);
+		bzero(buffer,BUFFER_SIZE);
+		memcpy(buffer, self.userid, MAXNAME);
+		write(socketfd, buffer, BUFFER_SIZE);
 
 	  	// fica esperando o servidor enviar sua estrutura deste client.
-		recv(socketfd, server_mirror, sizeof(struct client), 0);
+		bzero(buffer,BUFFER_SIZE);
+		read(socketfd, buffer, BUFFER_SIZE);
+		memcpy(&server_mirror, buffer, sizeof(struct client));
 	  
 	  	// pra cada arquivo do servidor:
 	  	int i;
@@ -87,12 +92,19 @@ void sync_client(*(int*)socket_sync)
 					{
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
-						send(socketfd, DOWNLOAD, 1, 0);
-						send(server_mirror.fileinfo[i].name, MAXNAME, 0);
+						bzero(buffer, BUFFER_SIZE);
+						memcpy(buffer, DOWNLOAD, 1);
+						write(socketfd, buffer, BUFFER_SIZE);
+
+						bzero(buffer,BUFFER_SIZE);
+						memcpy(buffer, server_mirror.fileinfo[i].name, MAXNAME);
+						write(socketfd, buffer, BUFFER_SIZE);
 					
 						struct file_info f;
 						//fica esperando receber struct
-						recv(socketfd, f, sizeof(struct file_info));
+						bzero(buffer,BUFFER_SIZE);
+						read(socketfd, buffer, BUFFER_SIZE);
+						memcpy(&f, buffer, sizeof(struct file_info));
 				
 						//recebe arquivo
 						//TODO
@@ -108,12 +120,19 @@ void sync_client(*(int*)socket_sync)
 					{
 						//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 						// pede para o servidor mandar o arquivo
-						send(socketfd, DOWNLOAD, 1, 0);
-						send(server_mirror.fileinfo[i].name, MAXNAME, 0);
+						bzero(buffer, BUFFER_SIZE);
+						memcpy(buffer, DOWNLOAD, 1);
+						write(socketfd, buffer, BUFFER_SIZE);
+
+						bzero(buffer,BUFFER_SIZE);
+						memcpy(buffer, server_mirror.fileinfo[i].name, MAXNAME);
+						write(socketfd, buffer, BUFFER_SIZE);
 
 						struct file_info f;
 						//fica esperando receber struct
-						recv(socketfd, f, sizeof(struct file_info);
+						bzero(buffer,BUFFER_SIZE);
+						read(socketfd, buffer, BUFFER_SIZE);
+						memcpy(&f, buffer, sizeof(struct file_info));
 				
 						//recebe arquivo
 						//TODO
@@ -124,8 +143,13 @@ void sync_client(*(int*)socket_sync)
 					else
 					{
 						// o arquivo é velho e deve ser deletado do servidor adequadamente.
-						send(socketfd, DELETE, 1, 0);
-						send(server_mirror.fileinfo[i].name, MAXNAME, 0);
+						bzero(buffer, BUFFER_SIZE);
+						memcpy(buffer, DELETE, 1);
+						write(socketfd, buffer, BUFFER_SIZE);
+
+						bzero(buffer,BUFFER_SIZE);
+						memcpy(buffer, server_mirror.fileinfo[i].name, MAXNAME);
+						write(socketfd, buffer, BUFFER_SIZE);
 					}
 				}
 		    }

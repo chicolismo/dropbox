@@ -3,12 +3,11 @@
 
 /*
 	TODO:
-		- Criar outra thread/socket no servidor (com port+1) quando ele aceita o cliente e roda a run_client
-		- arrumar todos os casos de enviar/receber mensagens pra ficar direitinho com memcpy e read/write
 		- NO SYNC_SERVER:
 			- deletar arquivo da pasta sync_dir_<user> do servidor
 			- chamar função de deletar arquivo n da estrutura do cliente
 		- @LARISSA: colocar tuas funções aqui dentro do dropboxServer.c
+		- criar no loop o comando list
 		
 		DEPOIS QUE ARRUMAR ISSO TUDO:
 		- ver os mutex!
