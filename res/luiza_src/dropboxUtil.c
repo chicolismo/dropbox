@@ -1,23 +1,23 @@
-#include "../include/dropboxUtil.h"
+//#include "../include/dropboxUtil.h"
+#include "dropboxUtil.h"
 
 void init_client(client *client, char *home, char *login)
 {
 	//inicializa estrutura self do cliente
 	strcpy(client->userid, login);
 
-	//inicializa todos os arquivos como null, preparando para a função update client
+	//inicializa todos os nomes de arquivo como empty string, preparando para a função update client
 	int i;
 	for(i = 0; i < MAXFILES; i++)
-		client->fileinfo[i] = NULL;
+		strcpy(client->fileinfo[i].name, "\0");
 	
-
 	//verifica se o diretorio sync_dir existe na home do usuario. se nao existir, cria.
 	char *sync_dir;
-	strcat(sync_dir, home)
+	strcat(sync_dir, home);
 	strcat(sync_dir, "/sync_dir_");
 	strcat(sync_dir, login);
 
-	struct stat st = {0};
+	struct stat st;
 	if (stat(sync_dir, &st) == -1)
 		  mkdir(home, 0700);
 
@@ -31,7 +31,7 @@ void init_client(client *client, char *home, char *login)
 void update_client(client *client, char *home)
 {
 	//setup do nome do diretório em que ele precisa procurar.
-	char sync_dir*;
+	char *sync_dir;
 	strcat(sync_dir,home);
 	strcat(sync_dir,"/sync_dir_");
 	strcat(sync_dir,client->userid);
@@ -49,8 +49,8 @@ void update_client(client *client, char *home)
 			struct file_info fi;
 			
 			// d_name é o nome do arquivo sem o resto do path. ta de boasssss
-			char *name = strtok(d->d_name, ".");
-			char *extension = atoi(strtok(NULL, "."));
+			char *name = strtok(dir->d_name, ".");
+			char *extension = strtok(NULL, ".");
 		
 		  	strcpy(fi.name, name);
 		  	strcpy(fi.extension, extension);
@@ -67,18 +67,18 @@ void update_client(client *client, char *home)
 		  	stat(fullpath, &attrib);
 		  	strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", gmtime(&(attrib.st_mtime)));
 		  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
-		  	fi.size = attrib.st_siz;
+		  	fi.size = (int)attrib.st_size;
 
 			//leitura do arquivo está sendo feita neste commit. colocar o commit atual do cliente no arquivo
 
 			fi.commit_modified = client->current_commit;
 
 			file_info *f = search_files(client, name);
-			if(f != NULL)
+			if(strcmp(f->name,"\0") != 0)
 			{
 				// arquivo já existe na estrutura
 				// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
-				if(file_more_recent_than(fi, f))
+				if(file_more_recent_than(&fi, f))
 					*f = fi;
 			}
 			else
@@ -98,7 +98,7 @@ file_info* search_files(client *client, char filename[MAXNAME])
 	int i;
 	for(i = 0; i < MAXFILES; i++)
 	{
-		if(client->fileinfo[i] != NULL)
+		if(strcmp(client->fileinfo[i].name,"\0") != 0)
 		{
 			if(strcmp(filename, client->fileinfo[i].name) == 0)
 				return &(client->fileinfo[i]);
@@ -113,7 +113,7 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 	for(i = 0; i < MAXFILES; i++)
 	{
 		// bota na primeira posição livre que achar.
-		if(client->fileinfo[i] == NULL)
+		if(strcmp(client->fileinfo[i].name,"\0") == 0)
 		{
 			client->fileinfo[i] = fileinfo;
 			break;
@@ -124,11 +124,11 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 void delete_file_from_client_list(client *client, char filename[MAXNAME])
 {
 	file_info *f = search_files(client, filename);
-	*f = NULL;
+	strcpy(f->name,"\0");
 }
 
 // retorna 1 se f1 é mais recente que f2. retorna 0  caso contrário
-int file_more_recent_than(file_info f1, file_info f2)
+int file_more_recent_than(file_info *f1, file_info *f2)
 {
 	/* DATE FORMAT
 		"%d-%m-%Y-%H-%M-%S"

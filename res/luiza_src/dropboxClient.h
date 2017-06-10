@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <netdb.h> 
+#include <pthread.h>
 
 #define MIN_ARG 3
 

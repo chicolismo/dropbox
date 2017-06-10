@@ -1,5 +1,7 @@
-#include "../include/dropboxClient.h"
-#include "../include/dropboxUtil.h"
+//#include "../include/dropboxClient.h"
+//#include "../include/dropboxUtil.h"
+#include "dropboxClient.h"
+#include "dropboxUtil.h"
 
 struct client self;
 
@@ -41,7 +43,7 @@ int connect_server(char *host, int port)
 }
 
 //VIROU A FUNÇÃO DA THREAD SEPARADA DO DAEMON
-void sync_client(*(int*)socket_sync)
+void sync_client(void *socket_sync)
 {
 	
 	char buffer[BUFFER_SIZE];
@@ -55,7 +57,7 @@ void sync_client(*(int*)socket_sync)
 		struct client server_mirror;
 		struct file_info *fi;
 	
-		char[256] home = "/home/";
+		char home[256] = "/home/";
 		strcat(home, getlogin());
 		update_client(&self, home);
 	
@@ -83,7 +85,7 @@ void sync_client(*(int*)socket_sync)
 			else
 		    {
 		    	// arquivo existe no cliente?
-				*fi = search_files(&self, server_mirror.fileinfo[i].name);
+				fi = search_files(&self, server_mirror.fileinfo[i].name);
 
 				if(fi != NULL)		// arquivo existe no cliente
 				{
@@ -178,7 +180,7 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	char[256] home = "/home/";
+	char home[256] = "/home/";
 	strcat(home, getlogin());
 	
 	init_client(&self, home, argv[1]);
@@ -195,8 +197,12 @@ int main(int argc, char *argv[])
 	sync_socketfd = connect_server(argv[2], atoi(argv[3])+1);
 
 	// dispara nova thread pra fazer o sync_client
+
+	int *newsync = malloc(1);
+	*newsync = sync_socketfd;
+
 	pthread_t initial_sync_client;
-	pthread_create(&initial_sync_client, NULL, sync_client, (void *)&sync_socketfd);
+	pthread_create(&initial_sync_client, NULL, sync_client, (void *)newsync);
 	pthread_detach(initial_sync_client);
     
 
@@ -208,7 +214,9 @@ int main(int argc, char *argv[])
 
 		strcpy(message, buffer);
 
-		char command[256] = strtok(message, " ");
+		char *command = strtok(message, " ");
+		char *filepath = strtok(NULL, " ");
+
 		if(strcmp(command, "list") == 0)
 		{
 
@@ -216,25 +224,21 @@ int main(int argc, char *argv[])
 		else if(strcmp(command, "exit") == 0)
 		{
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, 'e', 1);
+			memcpy(buffer, EXIT, 1);
 			write(socketfd, buffer, BUFFER_SIZE);
 		}
 		else if(strcmp(command, "upload") == 0)
 		{
-			char filepath[256] = strtok(message, NULL);
-
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, 'u', 1);
+			memcpy(buffer, UPLOAD, 1);
 			write(socketfd, buffer, BUFFER_SIZE);
 
 			// enviar o nome do arquivo
 		}
 		else if(strcmp(command, "download") == 0)
 		{
-			char file[256] = strtok(message, NULL);
-
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, 'd', 1);
+			memcpy(buffer, DOWNLOAD, 1);
 			write(socketfd, buffer, BUFFER_SIZE);
 
 			//enviar o nome do arquivo
