@@ -28,6 +28,11 @@ struct client {
 	int current_commit;
 } client;
 
+struct connection_info {
+	int port;
+	int socket_client; 
+};	
+
 void init_client(client *client, char *login);
 void update_client(client *client, char *home);
 file_info* search_files(client *client, char filename[MAXNAME]);

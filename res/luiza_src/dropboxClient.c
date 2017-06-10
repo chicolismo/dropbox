@@ -6,8 +6,6 @@ struct client self;
 /*
 	TODO:
 		- arrumar todos os casos de enviar/receber mensagens pra ficar direitinho com memcpy e read/write
-		- criar a função separada do sync com o wait
-		- criar a conexão no socket com a porta+1
 		- NA MAIN
 			- criar o loop de pegar o input do usuário e executar o comando
 
@@ -138,13 +136,16 @@ void sync_client(*(int*)socket_sync)
 			self.current_commit = server_mirror.current_commit + 1;
 		else
 			self.current_commit += 1;
+
+		// AQUI ETAPA DO SYNC_SERVER!
 	}
 }
 
 int main(int argc, char *argv[])
 {
-    int socketfd, message;
+    int socketfd;
     char buffer[BUFFER_SIZE];
+	char message[BUFFER_SIZE];
 	int sync_socketfd;
 
 	if (argc <= MIN_ARG) 
@@ -167,7 +168,7 @@ int main(int argc, char *argv[])
 	// recebe um ok do servidor para continuar a conexão
 
 	// conecta um novo socket na porta +1 para fazer o sync apenas sem bloquear o programa de comandos.
-	sync_socketfd = connect_server(argv[2], atoi(argv[3]));
+	sync_socketfd = connect_server(argv[2], atoi(argv[3])+1);
 
 	// dispara nova thread pra fazer o sync_client
 	pthread_t initial_sync_client;
@@ -176,30 +177,45 @@ int main(int argc, char *argv[])
     
 
 	// REVER ISSO
-	while(1) {
+	while(1) 
+	{
 		bzero(buffer, BUFFER_SIZE);
+		fgets(buffer, BUFFER_SIZE, stdin);
 
-		message = read(socketfd, buffer, BUFFER_SIZE);
-		if (message < 0) 
-			printf("ERROR reading from socket");
-		else {					
-			switch(message){
-				case EXIT:
-					disconnect_client(client);
-					pthread_exit();
-					break;
-				case DOWNLOAD:
-					//tem que ver como vamos receber isso...
-					message = read(socketfd, buffer, BUFFER_SIZE);
-					send_file(message, socketfd);
-					break;
-				case UPLOAD:
-					message = read(socketfd, buffer, BUFFER_SIZE);
-					receive_file(message, socketfd);
-					break;
-			}
+		strcpy(message, buffer);
+
+		char command[256] = strtok(message, " ");
+		if(strcmp(command, "list") == 0)
+		{
+
 		}
-		
+		else if(strcmp(command, "exit") == 0)
+		{
+			bzero(buffer, BUFFER_SIZE);
+			memcpy(buffer, 'e', 1);
+			write(socketfd, buffer, BUFFER_SIZE);
+		}
+		else if(strcmp(command, "upload") == 0)
+		{
+			char filepath[256] = strtok(message, NULL);
+
+			bzero(buffer, BUFFER_SIZE);
+			memcpy(buffer, 'u', 1);
+			write(socketfd, buffer, BUFFER_SIZE);
+
+			// enviar o nome do arquivo
+		}
+		else if(strcmp(command, "download") == 0)
+		{
+			char file[256] = strtok(message, NULL);
+
+			bzero(buffer, BUFFER_SIZE);
+			memcpy(buffer, 'd', 1);
+			write(socketfd, buffer, BUFFER_SIZE);
+
+			//enviar o nome do arquivo
+		}
 	}
+
     return 0;
 }

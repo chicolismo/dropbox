@@ -3,9 +3,7 @@
 
 /*
 	TODO:
-		- ***** URGENTE ***** ARRUMAR RECEIVE E SEND FILE  
-		- Criar outra thread/socket no servidor (com port+1) quando ele aceita o cliente e roda a run_thread
-		- separar o case de SYNC do loop da thread principal do cliente do servidor para o outra função nova
+		- Criar outra thread/socket no servidor (com port+1) quando ele aceita o cliente e roda a run_client
 		- arrumar todos os casos de enviar/receber mensagens pra ficar direitinho com memcpy e read/write
 		- NO SYNC_SERVER:
 			- deletar arquivo da pasta sync_dir_<user> do servidor
@@ -94,13 +92,48 @@ void send_file(char *file, int client_socket)
 	}
 }
 
-void run_thread(void *socket_client)
+void run_client(void *conn_info)
 {
-	char buffer[BUFFER_SIZE];
-	int socketfd = *(int*)socket_client;
-	char message;
-	printf("i created a thread\n");
+	connection_info ci = *(connection_info*)conn_info;
+	int socketfd = ci.socket_client;
 	
+	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
+	int socket_connection, socket_sync;
+	socklen_t sync_len;
+	struct sockaddr_in serv_addr, sync_addr;
+
+	int PORT = ci.port+1;
+	
+	if ((socket_connection = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+        printf("ERROR opening sync socket");
+	
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(PORT);
+	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(serv_addr.sin_zero), 8);     
+    
+	if (bind(socket_connection, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+		printf("ERROR on binding sync");
+	
+	listen(socket_connection, 1);
+	sync_len = sizeof(struct sockaddr_in);
+	
+	if( (socket_sync = accept(socket_connection, (struct sockaddr *) &sync_addr, &sync_len)) )
+	{
+		int *new_sock;
+		new_sock = malloc(1);
+       	*new_sock = socket_sync;
+		pthread_t sync_thread;
+		pthread_create(&sync_thread, NULL, run_sync, (void*)new_sock);
+		pthread_detach(sync_thread);
+
+	}
+	
+	// terminou de criar a thread de sync. agora pode executar o loop normal.
+	char buffer[BUFFER_SIZE];
+	char message;
+ 
+
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, BUFFER_SIZE);
@@ -136,7 +169,7 @@ void run_thread(void *socket_client)
 void run_sync(void *socket_sync)
 {
 	char buffer[BUFFER_SIZE];
-	int socketfd = *(int*)socket_client;
+	int socketfd = *(int*)socket_sync;
 	char message;
 
 	char message;
@@ -305,7 +338,6 @@ void sync_server(int socketfd)
 					//TODO
 
 					//bota f na estrutura self
-					//TODO
 					insert_file_into_client_list(client, f);
 				}
 			}
@@ -358,7 +390,7 @@ int main(int argc, char *argv[])
         	*new_sock = socket_client;
 			pthread_t client_thread;
 		
-			pthread_create(&client_thread, NULL, run_thread, (void*)new_sock);
+			pthread_create(&client_thread, NULL, run_client, (void*)new_sock);
 		
 			pthread_detach(client_thread);
 
