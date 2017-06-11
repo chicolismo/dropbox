@@ -199,7 +199,59 @@ int file_more_recent_than(file_info *f1, file_info *f2)
 
 
 
+void receive_file(char* file_name, int client_socket){
+    char buffer[256], char_buffer[1];
+    int error;
+    FILE *fp;
 
+    //printf("%s", file_name);
+    //open file
+    fp = fopen(file_name, "w");
+
+
+    bzero(char_buffer, 1);
+    read(client_socket, char_buffer, 1);
+    //fputc(char_buffer[0], fp);
+    while(char_buffer[0] != EOF)
+    {
+        fputc(char_buffer[0], fp);
+        bzero(char_buffer, 1);
+        read(client_socket, char_buffer, 1);
+        
+	}
+    
+}
+
+
+void send_file(char *file, int server_socket) {
+    char buffer[256], char_buffer, cb[1];
+    int error;
+    FILE *fp;
+
+    //printf("%s", file);
+    //abrir arquivo para leitura
+    fp = fopen(file, "r");
+
+    //passar char a char
+    char_buffer =  fgetc(fp);
+    while(char_buffer != EOF)
+    {    
+        bzero(cb, 1);
+        cb[0] = char_buffer;
+        write(server_socket, cb, 1);
+        char_buffer =  fgetc(fp);
+    }
+
+    bzero(cb, 1);
+    cb[0] = char_buffer;
+    write(server_socket, cb, 1);
+}
+
+
+
+
+
+/*
 void receive_file(int recv_socket){
     char buffer[256], file_name[256], char_buffer[1];
     int error;
@@ -227,11 +279,11 @@ void receive_file(int recv_socket){
         
 	}
     
-}
+}*/
 
 
 
-
+/*
 void send_file(char *file, int sendto_socket) {
     char buffer[256], char_buffer, cb[1];
     int error;
@@ -259,6 +311,6 @@ void send_file(char *file, int sendto_socket) {
     bzero(cb, 1);
     cb[0] = char_buffer;
     write(sendto_socket, cb, 1);
-}
+}*/
 
 
