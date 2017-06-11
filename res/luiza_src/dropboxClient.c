@@ -156,6 +156,11 @@ void sync_client(void *socket_sync)
 				}
 		    }
 		}
+		
+		// avisa que acabou o seu sync.
+		bzero(buffer, BUFFER_SIZE);
+		buffer[0] = SYNC_END;
+		write(socketfd, buffer, BUFFER_SIZE);
 
 		//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
 		if(self.current_commit < server_mirror.current_commit)
@@ -164,6 +169,44 @@ void sync_client(void *socket_sync)
 			self.current_commit += 1;
 
 		// AQUI ETAPA DO SYNC_SERVER!
+		
+		// envia seu mirror pro servidor
+		bzero(buffer, BUFFER_SIZE);
+		memcpy(buffer, &self, sizeof(struct client));
+		write(socketfd, buffer, BUFFER_SIZE);
+
+		while(1)
+		{
+			bzero(buffer,BUFFER_SIZE);
+
+			char command;
+			char fname[MAXNAME];
+
+			read(socketfd, buffer, BUFFER_SIZE);
+			memcpy(&command, buffer, 1);
+
+			if(command == DOWNLOAD)
+			{
+				bzero(buffer,BUFFER_SIZE);
+
+				// recebe nome do arquivo
+				read(socketfd, buffer, BUFFER_SIZE);
+				memcpy(fname, buffer, MAXNAME);
+				
+				// procura arquivo
+				file_info *f = search_files(&self, fname);
+
+				bzero(buffer,BUFFER_SIZE);
+
+				// manda struct
+				memcpy(buffer, &f, sizeof(file_info));
+				write(socketfd, buffer, BUFFER_SIZE);
+				
+				// manda arquivo
+			}
+			else
+				break;
+		}
 	}
 }
 

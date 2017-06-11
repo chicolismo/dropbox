@@ -11,11 +11,13 @@
 #define SLEEP 30
 
 //flags de controle
-#define EXIT 'e'
-#define SYNC 's'
-#define DOWNLOAD 'd'
-#define UPLOAD 'u'
 #define DELETE 'x'
+#define DOWNLOAD 'd'
+#define EXIT 'e'
+#define LIST 'l'
+#define SYNC 's'
+#define SYNC_END 'q'
+#define UPLOAD 'u'
 
 //connection flags
 #define NOT_VALID 0
