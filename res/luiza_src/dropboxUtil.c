@@ -3,6 +3,7 @@
 
 void init_client(client *client, char *home, char *login)
 {
+	printf("in: init client\n");
 	//inicializa estrutura self do cliente
 	strcpy(client->userid, login);
 
@@ -11,6 +12,8 @@ void init_client(client *client, char *home, char *login)
 	for(i = 0; i < MAXFILES; i++)
 		strcpy(client->fileinfo[i].name, "\0");
 	
+	printf("init max files\n");	
+
 	//verifica se o diretorio sync_dir existe na home do usuario. se nao existir, cria.
 	char *sync_dir;
 	strcat(sync_dir, home);
@@ -199,7 +202,8 @@ int file_more_recent_than(file_info *f1, file_info *f2)
 
 
 
-void receive_file(char* file_name, int client_socket){
+void receive_file(char* file_name, int client_socket)
+{
     char buffer[256], char_buffer[1];
     int error;
     FILE *fp;
@@ -223,7 +227,8 @@ void receive_file(char* file_name, int client_socket){
 }
 
 
-void send_file(char *file, int server_socket) {
+void send_file(char *file, int server_socket) 
+{
     char buffer[256], char_buffer, cb[1];
     int error;
     FILE *fp;
@@ -250,7 +255,8 @@ void send_file(char *file, int server_socket) {
 
 
 
-void remove_file(char *filename){
+void remove_file(char *filename)
+{
         unlink(filename);
 }
 

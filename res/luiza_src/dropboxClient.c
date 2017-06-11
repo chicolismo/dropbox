@@ -3,7 +3,7 @@
 #include "dropboxClient.h"
 #include "dropboxUtil.h"
 
-struct client self;
+client self;
 char home[256];
 
 /*
@@ -44,7 +44,7 @@ int connect_server(char *host, int port)
 }
 
 //VIROU A FUNÇÃO DA THREAD SEPARADA DO DAEMON
-void sync_client(void *socket_sync)
+void* sync_client(void *socket_sync)
 {
 	
 	char buffer[BUFFER_SIZE];
@@ -108,9 +108,19 @@ void sync_client(void *socket_sync)
 						bzero(buffer,BUFFER_SIZE);
 						read(socketfd, buffer, BUFFER_SIZE);
 						memcpy(&f, buffer, sizeof(struct file_info));
+
+						// receive file funciona com full path
+						char *fullpath;
+						strcat(fullpath, home);
+						strcat(fullpath, "/sync_dir_");
+						strcat(fullpath, self.userid);
+						strcat(fullpath, "/");
+						strcat(fullpath, f.name);
+						strcat(fullpath, ".");
+						strcat(fullpath, f.extension);
 				
 						//recebe arquivo
-						//TODO
+						receive_file(fullpath, socketfd);
 
 						// atualiza na estrutura do cliente.
 						*fi = f;
@@ -137,8 +147,18 @@ void sync_client(void *socket_sync)
 						read(socketfd, buffer, BUFFER_SIZE);
 						memcpy(&f, buffer, sizeof(struct file_info));
 				
+						// receive file funciona com full path
+						char *fullpath;
+						strcat(fullpath, home);
+						strcat(fullpath, "/sync_dir_");
+						strcat(fullpath, self.userid);
+						strcat(fullpath, "/");
+						strcat(fullpath, f.name);
+						strcat(fullpath, ".");
+						strcat(fullpath, f.extension);
+				
 						//recebe arquivo
-						//TODO
+						receive_file(fullpath, socketfd);
 
 						//bota f na estrutura self
 						insert_file_into_client_list(&self, f);
@@ -224,11 +244,17 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
+	printf("1\n");
+
 	strcat(home,"/home/");
 	strcat(home, getlogin());
+
+	printf("%s\n", home);
+	
+	printf("2\n");
 	
 	init_client(&self, home, argv[1]);
-
+	
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
 
@@ -240,8 +266,14 @@ int main(int argc, char *argv[])
 	// recebe um ok do servidor para continuar a conexão
 	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
-	//printf("%s\n", buffer);
-	printf("Connected. :)\n");
+	if(buffer[0] == ACCEPTED)
+		printf("Connected. :)\n");
+	else
+	{
+		printf("Connected in more than 2 devices.");
+		close(socketfd);
+		exit(1);
+	}
 
 	// conecta um novo socket na porta +1 para fazer o sync apenas sem bloquear o programa de comandos.
 	sync_socketfd = connect_server(argv[2], atoi(argv[3])+1);

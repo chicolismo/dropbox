@@ -14,7 +14,5 @@
 //AEHOOOOOOOOOOOOO
 
 int connect_server(char *host, int port);
-void sync_client(void *socket_sync);
-void send_file(char *file);
-void get_file(char *file);
+void* sync_client(void *socket_sync);
 void close_connection();

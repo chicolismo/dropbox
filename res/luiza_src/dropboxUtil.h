@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include <sys/stat.h>
+#include <pthread.h>
 
 #define BUFFER_SIZE 256
 #define MAXNAME 256
@@ -52,3 +53,6 @@ file_info* search_files(client *client, char filename[MAXNAME]);
 void insert_file_into_client_list(client *client, file_info fileinfo);
 void delete_file_from_client_list(client *client, char filename[MAXNAME]);
 int file_more_recent_than(file_info *f1, file_info *f2);
+void receive_file(char* file_name, int client_socket);
+void send_file(char *file, int server_socket);
+void remove_file(char *filename);

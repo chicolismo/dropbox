@@ -22,7 +22,7 @@ char home[256];
 		- ver os mutex!
 */
 
-void list_files(fileinfo files[256]){
+void list_files(file_info files[256]){
     int i;
     char filename[256];      
     for(i=0;i<256;i++){
@@ -117,8 +117,10 @@ int insert_client(client *clientinfo){
 }
 
 
-void run_client(void *conn_info)
+void* run_client(void *conn_info)
 {
+	char buffer[BUFFER_SIZE];
+	char message;
 	connection_info ci = *(connection_info*)conn_info;
 	int socketfd = ci.socket_client;
 
@@ -136,13 +138,27 @@ void run_client(void *conn_info)
 	}
 
 	// VAI RECEBER O ID DO CLIENTE ANTES DE CRIAR O SYNC
+	// AQUI ELE TEM QUE ACEITAR O CLIENTE E ENVIAR MENSAGEM DE OK
 	char clientid[MAXNAME];
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(clientid, buffer, MAXNAME);
 
 	client *cli;
-
-	// AQUI ELE TEM QUE ACEITAR O CLIENTE E ENVIAR MENSAGEM DE OK
+	if(return_client(clientid, cli) == ACCEPTED)
+	{
+		bzero(buffer, BUFFER_SIZE);
+		buffer[0] = ACCEPTED;		
+		write(socketfd, buffer, BUFFER_SIZE);
+	}
+	else
+	{
+		bzero(buffer, BUFFER_SIZE);
+		buffer[0] = NOT_VALID;
+		write(socketfd, buffer, BUFFER_SIZE);
+		
+		close(socketfd);
+		pthread_exit(0);
+	}
 	
 	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
 	int socket_connection, socket_sync;
@@ -177,8 +193,7 @@ void run_client(void *conn_info)
 	}
 	
 	// terminou de criar a thread de sync. agora pode executar o loop normal.
-	char buffer[BUFFER_SIZE];
-	char message;
+	
  
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
@@ -192,7 +207,7 @@ void run_client(void *conn_info)
 			switch(message){
 				case EXIT:
 					disconnect_client(cli);
-					pthread_exit();
+					pthread_exit(0);
 					break;
 				case DOWNLOAD:
 					bzero(buffer, BUFFER_SIZE);
@@ -213,7 +228,7 @@ void run_client(void *conn_info)
 	close(socketfd);
 }
 
-void run_sync(void *socket_sync)
+void* run_sync(void *socket_sync)
 {
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
@@ -242,6 +257,7 @@ void run_sync(void *socket_sync)
 
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli;
+				return_client(client_id, cli); 
 
 				memcpy(buffer, cli, sizeof(client));
 				write(socketfd, buffer, BUFFER_SIZE);
@@ -271,10 +287,21 @@ void run_sync(void *socket_sync)
 						bzero(buffer,BUFFER_SIZE);
 
 						// manda struct
-						memcpy(buffer, &f, sizeof(file_info));
+						memcpy(buffer, f, sizeof(file_info));
 						write(socketfd, buffer, BUFFER_SIZE);
-						
-						// manda arquivo
+
+						// receive file funciona com full path
+						char *fullpath;
+						strcat(fullpath, home);
+						strcat(fullpath, "/sync_dir_");
+						strcat(fullpath, cli->userid);
+						strcat(fullpath, "/");
+						strcat(fullpath, f->name);
+						strcat(fullpath, ".");
+						strcat(fullpath, f->extension);
+
+						// manda arquivo				
+						send_file(fullpath, socketfd);
 					}
 					else if(command == DELETE)
 					{
@@ -285,10 +312,22 @@ void run_sync(void *socket_sync)
 						memcpy(fname, buffer, MAXNAME);
 
 						// procura arquivo
+						file_info *f = search_files(cli, fname);
 
 						// deleta arquivo da pasta sync do server
+						char *fullpath;
+						strcpy(fullpath, home);
+						strcpy(fullpath, "/sync_dir_");
+						strcpy(fullpath, cli->userid);
+						strcpy(fullpath, "/");
+						strcpy(fullpath, f->name);
+						strcpy(fullpath, ".");
+						strcpy(fullpath, f->extension);
+			
+						remove_file(fullpath);
 
 						// deleta estrutura da lista de arquivos do cliente
+						delete_file_from_client_list(cli, fname);
 					}
 					else
 						break;
@@ -315,6 +354,7 @@ void sync_server(int socketfd)
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli;
+	return_client(client_mirror.userid, cli);
 	update_client(cli, home);
   
   	// pra cada arquivo do cliente:
@@ -351,8 +391,18 @@ void sync_server(int socketfd)
 					read(socketfd, buffer, BUFFER_SIZE);
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
+					// receive file funciona com full path
+					char *fullpath;
+					strcat(fullpath, home);
+					strcat(fullpath, "/sync_dir_");
+					strcat(fullpath, cli->userid);
+					strcat(fullpath, "/");
+					strcat(fullpath, f.name);
+					strcat(fullpath, ".");
+					strcat(fullpath, f.extension);
+			
 					//recebe arquivo
-					//TODO
+					receive_file(fullpath, socketfd);
 
 					// atualiza na estrutura do cliente no servidor.
 					*fi = f;
@@ -397,7 +447,7 @@ void sync_server(int socketfd)
 
 int main(int argc, char *argv[])
 {
-	home[256] = "/home/";
+	strcpy(home,"/home/");
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
