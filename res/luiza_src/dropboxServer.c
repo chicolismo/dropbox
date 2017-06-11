@@ -22,6 +22,44 @@ char home[256];
 		- ver os mutex!
 */
 
+void list_files(fileinfo files[256]){
+    int i;
+    char filename[256];      
+    for(i=0;i<256;i++){
+        if (strcmp(files[i].name,"") == 0)
+            break;
+        else{
+            strcpy(filename, "");
+            strcat(filename, files[i].name);
+            strcat(filename, files[i].extension);
+
+            printf("%s", filename);
+        }
+            
+    }
+
+}
+
+
+int return_client(char* user_name, client *new_client){
+    client *tempinfo;
+
+	if(FirstFila2(&connected_clients) != 0){
+		do{
+			tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
+			if (strcmp(tempinfo->userid, user_name) == 0){ //mesmo id = já tem um logado
+			        new_client = (client*)(GetAtIteratorFila2(&connected_clients));
+					return ACCEPTED;	
+            }			
+            else{
+					return NOT_VALID;
+	        }
+			
+				
+		}while(NextFila2(&connected_clients) != 0);
+    }
+}
+
 
 void disconnect_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
