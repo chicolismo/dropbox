@@ -3,7 +3,6 @@
 
 void init_client(client *client, char *home, char *login)
 {
-	printf("in: init client\n");
 	//inicializa estrutura self do cliente
 	strcpy(client->userid, login);
 
@@ -12,17 +11,17 @@ void init_client(client *client, char *home, char *login)
 	for(i = 0; i < MAXFILES; i++)
 		strcpy(client->fileinfo[i].name, "\0");
 	
-	printf("init max files\n");	
-
 	//verifica se o diretorio sync_dir existe na home do usuario. se nao existir, cria.
-	char *sync_dir;
-	strcat(sync_dir, home);
+	char sync_dir[256];
+	strcpy(sync_dir, home);
 	strcat(sync_dir, "/sync_dir_");
 	strcat(sync_dir, login);
 
+
 	struct stat st;
-	if (stat(sync_dir, &st) == -1)
-		  mkdir(home, 0700);
+	if (stat(sync_dir, &st) != 0) {
+		  mkdir(sync_dir, 0777);
+	}
 
 	client->logged_in = 1;
 	client->current_commit = 0;
@@ -34,8 +33,8 @@ void init_client(client *client, char *home, char *login)
 void update_client(client *client, char *home)
 {
 	//setup do nome do diretório em que ele precisa procurar.
-	char *sync_dir;
-	strcat(sync_dir,home);
+	char sync_dir[256];
+	strcpy(sync_dir,home);
 	strcat(sync_dir,"/sync_dir_");
 	strcat(sync_dir,client->userid);
  
@@ -51,6 +50,9 @@ void update_client(client *client, char *home)
 	  {
 			struct file_info fi;
 			
+			if(strcmp(dir->d_name, "..") == 0)
+				break;
+
 			// d_name é o nome do arquivo sem o resto do path. ta de boasssss
 			char *name = strtok(dir->d_name, ".");
 			char *extension = strtok(NULL, ".");
@@ -60,8 +62,8 @@ void update_client(client *client, char *home)
 
 		  	// pegar ultima data de modificação do arquivo
 			//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
-			char *fullpath;
-			strcat(fullpath, sync_dir);
+			char fullpath[256];
+			strcpy(fullpath, sync_dir);
 			strcat(fullpath, name);
 			strcat(fullpath, ".");
 			strcat(fullpath, extension);
@@ -93,7 +95,6 @@ void update_client(client *client, char *home)
 	  }
 	  closedir(d);
 	}
-
 }
 
 file_info* search_files(client *client, char filename[MAXNAME])

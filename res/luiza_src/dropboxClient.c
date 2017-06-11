@@ -46,7 +46,8 @@ int connect_server(char *host, int port)
 //VIROU A FUNÇÃO DA THREAD SEPARADA DO DAEMON
 void* sync_client(void *socket_sync)
 {
-	
+	printf("criei thread de sync!\n");
+
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 
@@ -287,7 +288,7 @@ int main(int argc, char *argv[])
     if (pthread_mutex_init(&self.mutex, NULL) != 0)
     {
         printf("\nMutex (queue) init failed\n");
-        return;
+        return 0;
     }
 
 	pthread_t initial_sync_client;

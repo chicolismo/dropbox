@@ -124,13 +124,16 @@ void* run_client(void *conn_info)
 	connection_info ci = *(connection_info*)conn_info;
 	int socketfd = ci.socket_client;
 
-    
+	printf("entrei no run client\n");
 
 	// VAI RECEBER O ID DO CLIENTE ANTES DE CRIAR O SYNC
 	// AQUI ELE TEM QUE ACEITAR O CLIENTE E ENVIAR MENSAGEM DE OK
 	char clientid[MAXNAME];
+
+	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(clientid, buffer, MAXNAME);
+	printf("%s\n", buffer);
 
 	client *cli;
 	if(return_client(clientid, cli) == ACCEPTED)
