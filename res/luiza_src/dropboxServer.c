@@ -8,6 +8,7 @@
 
 pthread_mutex_t queue;
 FILA2 connected_clients;
+char home[256];
 
 /*
 	TODO:
@@ -97,7 +98,13 @@ void run_client(void *conn_info)
 	}
 
 	// VAI RECEBER O ID DO CLIENTE ANTES DE CRIAR O SYNC
+	char clientid[MAXNAME];
+	read(socketfd, buffer, BUFFER_SIZE);
+	memcpy(clientid, buffer, MAXNAME);
+
 	client *cli;
+
+	// AQUI ELE TEM QUE ACEITAR O CLIENTE E ENVIAR MENSAGEM DE OK
 	
 	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
 	int socket_connection, socket_sync;
@@ -260,18 +267,13 @@ void sync_server(int socketfd)
 {
 	struct client client_mirror;
 	struct file_info *fi;
-
 	char buffer[BUFFER_SIZE];
-	
+
 	//server fica esperando o cliente enviar seu mirror
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(&client_mirror, buffer, sizeof(struct client));
 	
 	bzero(buffer,BUFFER_SIZE);
-
-	char home[256] = "/home/";
-	strcat(home, getlogin());
-	strcat(home, "/server");
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli;
@@ -350,13 +352,17 @@ void sync_server(int socketfd)
         }
     }
 
-	//avança o estado de commit do cliente.
+	//avança o estado de commit do cliente no servidor.
 	cli->current_commit += 1;
 }
 
 
 int main(int argc, char *argv[])
 {
+	home[256] = "/home/";
+	strcat(home, getlogin());
+	strcat(home, "/server");
+
 	int socket_connection, socket_client;
 	socklen_t client_len;
 	struct sockaddr_in serv_addr, client_addr;

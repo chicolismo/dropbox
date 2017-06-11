@@ -231,10 +231,16 @@ int main(int argc, char *argv[])
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
 	socketfd = connect_server(argv[2], atoi(argv[3]));
 
-	//send userid to server
-	send(socketfd, self.userid, MAXNAME, 0);
+	//manda userid para o server
+	bzero(buffer, BUFFER_SIZE);
+	memcpy(buffer, self.userid, MAXNAME);
+	write(socketfd, buffer, BUFFER_SIZE);
 
 	// recebe um ok do servidor para continuar a conexão
+	bzero(buffer, BUFFER_SIZE);
+	read(socketfd, buffer, BUFFER_SIZE);
+	//printf("%s\n", buffer);
+	printf("Connected. :)\n");
 
 	// conecta um novo socket na porta +1 para fazer o sync apenas sem bloquear o programa de comandos.
 	sync_socketfd = connect_server(argv[2], atoi(argv[3])+1);
@@ -248,8 +254,6 @@ int main(int argc, char *argv[])
 	pthread_create(&initial_sync_client, NULL, sync_client, (void*)newsync);
 	pthread_detach(initial_sync_client);
     
-
-	// REVER ISSO
 	while(1) 
 	{
 		bzero(buffer, BUFFER_SIZE);
@@ -262,7 +266,15 @@ int main(int argc, char *argv[])
 
 		if(strcmp(command, "list") == 0)
 		{
+			bzero(buffer, BUFFER_SIZE);
+			buffer[0] = LIST;
+			write(socketfd, buffer, BUFFER_SIZE);
 
+			bzero(buffer, BUFFER_SIZE);
+			read(socketfd, buffer, BUFFER_SIZE);
+
+			// faz o que agora?
+			
 		}
 		else if(strcmp(command, "exit") == 0)
 		{
@@ -276,7 +288,7 @@ int main(int argc, char *argv[])
 			buffer[0] = UPLOAD;
 			write(socketfd, buffer, BUFFER_SIZE);
 
-			// enviar o nome do arquivo
+			// envia o arquivo;
 		}
 		else if(strcmp(command, "download") == 0)
 		{
@@ -284,7 +296,12 @@ int main(int argc, char *argv[])
 			buffer[0] = DOWNLOAD;
 			write(socketfd, buffer, BUFFER_SIZE);
 
-			//enviar o nome do arquivo
+			// enviar o nome do arquivo
+			bzero(buffer, BUFFER_SIZE);
+			memcpy(buffer, filepath, MAXNAME);
+			write(socketfd, buffer, BUFFER_SIZE);
+
+			// espera o arquivo
 		}
 	}
 
