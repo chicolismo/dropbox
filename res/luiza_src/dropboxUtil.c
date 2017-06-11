@@ -250,6 +250,12 @@ void send_file(char *file, int server_socket) {
 
 
 
+void remove_file(char *filename){
+        unlink(filename);
+}
+
+
+
 
 /*
 void receive_file(int recv_socket){
