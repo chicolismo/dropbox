@@ -122,18 +122,7 @@ void run_client(void *conn_info)
 	connection_info ci = *(connection_info*)conn_info;
 	int socketfd = ci.socket_client;
 
-    //inicializa mutex da fila de clientes
-    if (pthread_mutex_init(&queue, NULL) != 0)
-    {
-        printf("\nMutex (queue) init failed\n");
-        return;
-    }
-
-    //inicializa fila de clientes	
-	if(CreateFila2(&connected_clients) != 0){
-		printf("\nInit failed\n");
-		return;
-	}
+    
 
 	// VAI RECEBER O ID DO CLIENTE ANTES DE CRIAR O SYNC
 	char clientid[MAXNAME];
@@ -404,6 +393,20 @@ int main(int argc, char *argv[])
 	int socket_connection, socket_client;
 	socklen_t client_len;
 	struct sockaddr_in serv_addr, client_addr;
+
+
+    //inicializa mutex da fila de clientes
+    if (pthread_mutex_init(&queue, NULL) != 0)
+    {
+        printf("\nMutex (queue) init failed\n");
+        return;
+    }
+
+    //inicializa fila de clientes	
+	if(CreateFila2(&connected_clients) != 0){
+		printf("\nInit failed\n");
+		return;
+	}
 
 	
 	if(argc <= MIN_ARG)
