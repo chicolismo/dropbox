@@ -63,7 +63,7 @@ void sync_client(void *socket_sync)
 	
 		// envia para o servidor que ele vai começar o sync.
 		bzero(buffer, BUFFER_SIZE);
-		memcpy(buffer, SYNC, 1);
+		buffer[0] = SYNC;
 		write(socketfd, buffer, BUFFER_SIZE);
 
 		// envia para o servidor o seu login
@@ -95,7 +95,7 @@ void sync_client(void *socket_sync)
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
 						bzero(buffer, BUFFER_SIZE);
-						memcpy(buffer, DOWNLOAD, 1);
+						buffer[0] = DOWNLOAD;
 						write(socketfd, buffer, BUFFER_SIZE);
 
 						bzero(buffer,BUFFER_SIZE);
@@ -123,7 +123,7 @@ void sync_client(void *socket_sync)
 						//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 						// pede para o servidor mandar o arquivo
 						bzero(buffer, BUFFER_SIZE);
-						memcpy(buffer, DOWNLOAD, 1);
+						buffer[0] = DOWNLOAD;
 						write(socketfd, buffer, BUFFER_SIZE);
 
 						bzero(buffer,BUFFER_SIZE);
@@ -146,7 +146,7 @@ void sync_client(void *socket_sync)
 					{
 						// o arquivo é velho e deve ser deletado do servidor adequadamente.
 						bzero(buffer, BUFFER_SIZE);
-						memcpy(buffer, DELETE, 1);
+						buffer[0] = DELETE;
 						write(socketfd, buffer, BUFFER_SIZE);
 
 						bzero(buffer,BUFFER_SIZE);
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 	*newsync = sync_socketfd;
 
 	pthread_t initial_sync_client;
-	pthread_create(&initial_sync_client, NULL, sync_client, (void *)newsync);
+	pthread_create(&initial_sync_client, NULL, sync_client, (void*)newsync);
 	pthread_detach(initial_sync_client);
     
 
@@ -224,13 +224,13 @@ int main(int argc, char *argv[])
 		else if(strcmp(command, "exit") == 0)
 		{
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, EXIT, 1);
+			buffer[0] = EXIT;
 			write(socketfd, buffer, BUFFER_SIZE);
 		}
 		else if(strcmp(command, "upload") == 0)
 		{
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, UPLOAD, 1);
+			buffer[0] = UPLOAD;
 			write(socketfd, buffer, BUFFER_SIZE);
 
 			// enviar o nome do arquivo
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 		else if(strcmp(command, "download") == 0)
 		{
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, DOWNLOAD, 1);
+			buffer[0] = DOWNLOAD;
 			write(socketfd, buffer, BUFFER_SIZE);
 
 			//enviar o nome do arquivo

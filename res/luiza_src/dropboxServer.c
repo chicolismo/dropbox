@@ -1,9 +1,13 @@
+//#include "../include/dropboxServer.h"
+//#include "../include/dropboxClient.h"
+
 #include "dropboxServer.h"
 #include "dropboxUtil.h"
-#include "../../include/fila.h"
+//#include "../../include/fila2.h"
+#include "fila2.h"
 
 pthread_mutex_t queue;
-PFILA2 connected_clients;
+FILA2 connected_clients;
 
 /*
 	TODO:
@@ -18,36 +22,36 @@ PFILA2 connected_clients;
 */
 
 
-void disconnect_client(client clientinfo){
+void disconnect_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
 	
 	client *tempinfo;
-	tempinfo = (client*)(GetAtIteratorFila2(connected_clients));
-	while(strcmp(tempinfo->userid, clientinfo.userid) != 0){
-		NextFila2(connected_clients);
-		tempinfo = (client*)(GetAtIteratorFila2(connected_clients));
+	tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
+	while(strcmp(tempinfo->userid, clientinfo->userid) != 0){
+		NextFila2(&connected_clients);
+		tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
 	}
 		
 	//se tem dois conectados, disconecta um
 	if(tempinfo->devices[1] == 1)
 		tempinfo->devices[1] = 0;
 	else //se não, remove a estrutura
-		DeleteAtIteratorFila2(connected_clients);
+		DeleteAtIteratorFila2(&connected_clients);
 		
 	pthread_mutex_unlock(&queue);
 }
 
 
 
-void insert_client(client clientinfo){
+int insert_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
 	
 	//busca se já existe
 	client *tempinfo;
-	if(FirstFila2(connected_clients) != 0){
+	if(FirstFila2(&connected_clients) != 0){
 		do{
-			tempinfo = (client*)(GetAtIteratorFila2(connected_clients));
-			if (strcmp(tempinfo->userid, clientinfo.userid) == 0){ //mesmo id = já tem um logado
+			tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
+			if (strcmp(tempinfo->userid, clientinfo->userid) == 0){ //mesmo id = já tem um logado
 				if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
 					return NOT_VALID;	
 				else{
@@ -56,19 +60,21 @@ void insert_client(client clientinfo){
 				}
 			}
 				
-		}while(NextFila2(connected_clients) != 0);
+		}while(NextFila2(&connected_clients) != 0);
 	}
 	else{ //fila vazia pode inserir
-		AppendFila2(connected_clients, (void*)clientinfo);
+		AppendFila2(&connected_clients, (void*)clientinfo);
 		tempinfo->devices[0] = 1;
 		return ACCEPTED;
 	}
 	
 	//nao achou cliente na fila, insere no fim
-	AppendFila2(connected_clients, (void*)clientinfo);
+	AppendFila2(&connected_clients, (void*)clientinfo);
 	tempinfo->devices[0] = 1;
 	
 	pthread_mutex_unlock(&queue);
+
+	return 1;
 }
 
 
@@ -77,19 +83,21 @@ void run_client(void *conn_info)
 	connection_info ci = *(connection_info*)conn_info;
 	int socketfd = ci.socket_client;
 
-
     //inicializa mutex da fila de clientes
     if (pthread_mutex_init(&queue, NULL) != 0)
     {
         printf("\nMutex (queue) init failed\n");
-        return 1;
+        return;
     }
 
     //inicializa fila de clientes	
-	if(CreateFila2(connected_clients) != 0){
+	if(CreateFila2(&connected_clients) != 0){
 		printf("\nInit failed\n");
-		return 1;
+		return;
 	}
+
+	// VAI RECEBER O ID DO CLIENTE ANTES DE CRIAR O SYNC
+	client *cli;
 	
 	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
 	int socket_connection, socket_sync;
@@ -127,7 +135,6 @@ void run_client(void *conn_info)
 	char buffer[BUFFER_SIZE];
 	char message;
  
-
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, BUFFER_SIZE);
@@ -139,23 +146,24 @@ void run_client(void *conn_info)
 			//nao sei se é exatamente assim
 			switch(message){
 				case EXIT:
-					disconnect_client(client);
+					disconnect_client(cli);
 					pthread_exit();
 					break;
 				case DOWNLOAD:
-					//tem que ver como vamos receber isso...
-					message = read(socketfd, buffer, BUFFER_SIZE);
-					send_file(message, socketfd);
+					bzero(buffer, BUFFER_SIZE);
+					read(socketfd, buffer, BUFFER_SIZE);
+					send_file(buffer, socketfd);
 					break;
 				case UPLOAD:
-					message = read(socketfd, buffer, BUFFER_SIZE);
-					receive_file(message, socketfd);
+					bzero(buffer, BUFFER_SIZE);
+					read(socketfd, buffer, BUFFER_SIZE);
+					receive_file(buffer, socketfd);
 					break;
 			}
 		}
 	}
 
-	free(socket_client);
+	//free(socket_sync);
 
 	close(socketfd);
 }
@@ -166,9 +174,6 @@ void run_sync(void *socket_sync)
 	int socketfd = *(int*)socket_sync;
 	char message;
 
-	char message;
-	printf("i created a thread\n");
-	
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
 
@@ -191,8 +196,9 @@ void run_sync(void *socket_sync)
 				bzero(buffer,BUFFER_SIZE);
 
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
+				client *cli;
 
-				memcpy(buffer, &client, sizeof(client));
+				memcpy(buffer, cli, sizeof(client));
 				write(socketfd, buffer, BUFFER_SIZE);
 
 				// agora fica em um while !finished, fica recebendo comandos de download/delete
@@ -215,7 +221,7 @@ void run_sync(void *socket_sync)
 						memcpy(fname, buffer, MAXNAME);
 						
 						// procura arquivo
-						file_info *f = search_files(client, fname);
+						file_info *f = search_files(cli, fname);
 
 						bzero(buffer,BUFFER_SIZE);
 
@@ -246,6 +252,8 @@ void run_sync(void *socket_sync)
 				// aí executa aqui o sync_server.
 				sync_server(socketfd);
 			}
+		}
+	}
 }
 
 void sync_server(int socketfd)
@@ -261,13 +269,13 @@ void sync_server(int socketfd)
 	
 	bzero(buffer,BUFFER_SIZE);
 
-	char[256] home = "/home/";
+	char home[256] = "/home/";
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
-	client *client;
-	update_client(client, home);
+	client *cli;
+	update_client(cli, home);
   
   	// pra cada arquivo do cliente:
   	int i;
@@ -278,16 +286,17 @@ void sync_server(int socketfd)
     	else
         {
         	// arquivo existe no servidor?
-			*fi = search_files(client, client_mirror.fileinfo[i].name);
+			fi = search_files(cli, client_mirror.fileinfo[i].name);
 
 			if(fi != NULL)		// arquivo existe no servidor
 			{
 				//verifica se o arquivo no cliente tem commit_created/modified > state do servidor.
-				if(client_mirror.fileinfo[i].commit_modified > client->current_commit)
+				if(client_mirror.fileinfo[i].commit_modified > cli->current_commit)
 				{
 					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 					// pede para o cliente mandar o arquivo
-					memcpy(buffer, DOWNLOAD, 1);
+					bzero(buffer,BUFFER_SIZE);
+					buffer[0] = DOWNLOAD;
 					write(socketfd, buffer, BUFFER_SIZE);
 
 					bzero(buffer,BUFFER_SIZE);
@@ -312,11 +321,12 @@ void sync_server(int socketfd)
 			else				// arquivo não existe no servidor
 			{
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
-				if(client_mirror.fileinfo[i].commit_modified > client->current_commit)
+				if(client_mirror.fileinfo[i].commit_modified > cli->current_commit)
 				{
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o cliente mandar o arquivo
-					memcpy(buffer, DOWNLOAD, 1);
+					bzero(buffer,BUFFER_SIZE);
+					buffer[0] = DOWNLOAD;
 					write(socketfd, buffer, BUFFER_SIZE);
 
 					bzero(buffer,BUFFER_SIZE);
@@ -326,20 +336,22 @@ void sync_server(int socketfd)
 
 					struct file_info f;
 					//fica esperando receber struct
-					recv(socketfd, f, sizeof(struct file_info);
+					bzero(buffer,BUFFER_SIZE);
+					read(socketfd, buffer, BUFFER_SIZE);
+					memcpy(&f, buffer, sizeof(struct file_info));
 				
 					//recebe arquivo
 					//TODO
 
 					//bota f na estrutura self
-					insert_file_into_client_list(client, f);
+					insert_file_into_client_list(cli, f);
 				}
 			}
         }
     }
 
 	//avança o estado de commit do cliente.
-	client->current_commit += 1;
+	cli->current_commit += 1;
 }
 
 

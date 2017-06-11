@@ -11,11 +11,16 @@
 #define SLEEP 30
 
 //flags de controle
-#define EXIT "e"
-#define SYNC "s"
-#define DOWNLOAD "d"
-#define UPLOAD "u"
-#define DELETE "x"
+#define EXIT 'e'
+#define SYNC 's'
+#define DOWNLOAD 'd'
+#define UPLOAD 'u'
+#define DELETE 'x'
+
+//connection flags
+#define NOT_VALID 0
+#define ACCEPTED 1
+
 
 typedef struct file_info {
 	char name[MAXNAME];
