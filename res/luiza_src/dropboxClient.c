@@ -4,6 +4,7 @@
 #include "dropboxUtil.h"
 
 struct client self;
+char home[256];
 
 /*
 	TODO:
@@ -223,7 +224,7 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	char home[256] = "/home/";
+	strcat(home,"/home/");
 	strcat(home, getlogin());
 	
 	init_client(&self, home, argv[1]);
