@@ -38,6 +38,7 @@ typedef struct client {
 	struct file_info fileinfo[MAXFILES];
 	int logged_in;
 	int current_commit;
+    pthread_mutex_t mutex;
 } client;
 
 typedef struct connection_info {
