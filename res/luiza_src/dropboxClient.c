@@ -283,6 +283,13 @@ int main(int argc, char *argv[])
 	int *newsync = malloc(1);
 	*newsync = sync_socketfd;
 
+    //inicializa mutex da fila de clientes
+    if (pthread_mutex_init(&self.mutex, NULL) != 0)
+    {
+        printf("\nMutex (queue) init failed\n");
+        return;
+    }
+
 	pthread_t initial_sync_client;
 	pthread_create(&initial_sync_client, NULL, sync_client, (void*)newsync);
 	pthread_detach(initial_sync_client);
