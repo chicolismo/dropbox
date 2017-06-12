@@ -89,25 +89,37 @@ int insert_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
     int i;
 
-
     for(i=0;i<256;i++){
-        if(connected_clients[i].logged_in == 1){
-            if(strcmp(clientinfo->userid, connected_clients[i].userid) == 0){
-                connected_clients[i].devices[1] = 1; //ja esta conectado, ativar segundo device
-                return ACCEPTED;
+        if(connected_clients[i].logged_in == 1)
+		{
+            if(strcmp(clientinfo->userid, connected_clients[i].userid) == 0)
+			{
+				if(connected_clients[i].devices[1] == 0)
+				{
+		            connected_clients[i].devices[1] = 1; //ja esta conectado, ativar segundo device
+					pthread_mutex_unlock(&queue);
+		            return ACCEPTED;
+				}
+				else
+				{
+					pthread_mutex_unlock(&queue);
+					return NOT_VALID;
+				}
             }
         }
+		else
+		{
+			memcpy(&connected_clients[i], clientinfo, sizeof(client));
+			//connected_clients[i] = *clientinfo;
+			connected_clients[i].devices[0] = 1;
+			pthread_mutex_unlock(&queue);
+			return ACCEPTED;
+		}
     }
 
-    //primeiro a conectar, inserir
-    while(connected_clients[i].logged_in == 1){
-        i++;
-    }
-    memcpy(&connected_clients[i], &clientinfo, sizeof(client));
-    return ACCEPTED;
-
-    
 	pthread_mutex_unlock(&queue);
+
+	return NOT_VALID;
 }
 
 
@@ -248,14 +260,15 @@ void* run_sync(void *socket_sync)
 				
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli = malloc(sizeof(client));
-				return_client(client_id, cli); 
+				int cliindex = return_client(client_id, cli); 
 
-				update_client(cli, home);
+				update_client(&(connected_clients[cliindex]), home);
+				client c = connected_clients[cliindex];
 			
-				printf("got client! %s\n", cli->userid);
+				printf("got client! %s\n", c.userid);
 
 				bzero(buffer,BUFFER_SIZE);
-				memcpy(buffer, cli, sizeof(client *));
+				memcpy(buffer, &c, sizeof(client));
 				write(socketfd, buffer, BUFFER_SIZE);
 
 				printf("ok\n");
@@ -361,20 +374,23 @@ void sync_server(int socketfd)
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(&client_mirror, buffer, sizeof(struct client));
 
-	printf("%s\n", client_mirror.userid);
+	printf("mirror %s\n", client_mirror.userid);
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli = malloc(sizeof(client));
-	return_client(client_mirror.userid, cli);
-	update_client(cli, home);
+	int cliindex = return_client(client_mirror.userid, cli); 
 
-	printf("%s\n", cli->userid);
+	update_client(&(connected_clients[cliindex]), home);
+	client c = connected_clients[cliindex];
+
+	printf("%s\n", c.userid);
   
   	// pra cada arquivo do cliente:
   	int i;
   	for(i = 0; i < MAXFILES; i++) 
     {
 		printf("files\n");
+		printf("file: %s\n", client_mirror.fileinfo[i].name);
       	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
 		{
 			printf("break\n");

@@ -33,6 +33,8 @@ void init_client(client *client, char *home, char *login)
 void update_client(client *client, char *home)
 {
 	//setup do nome do diretório em que ele precisa procurar.
+	int x;
+
 	char sync_dir[256];
 	strcpy(sync_dir,home);
 	strcat(sync_dir,"/sync_dir_");
@@ -48,45 +50,51 @@ void update_client(client *client, char *home)
 	  int i = 0;
 	  while ((dir = readdir(d)) != NULL)
 	  {
+			printf("%s\n",dir->d_name);
 			struct file_info fi;
 			
-			if(strcmp(dir->d_name, "..") == 0)
-				break;
-
-			// d_name é o nome do arquivo sem o resto do path. ta de boasssss
-			char *name = strtok(dir->d_name, ".");
-			char *extension = strtok(NULL, ".");
-		
-		  	strcpy(fi.name, name);
-		  	strcpy(fi.extension, extension);
-
-		  	// pegar ultima data de modificação do arquivo
-			//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
-			char fullpath[256];
-			strcpy(fullpath, sync_dir);
-			strcat(fullpath, name);
-			strcat(fullpath, ".");
-			strcat(fullpath, extension);
-
-		  	struct stat attrib;
-		  	stat(fullpath, &attrib);
-		  	strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", gmtime(&(attrib.st_mtime)));
-		  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
-		  	fi.size = (int)attrib.st_size;
-
-			//leitura do arquivo está sendo feita neste commit. colocar o commit atual do cliente no arquivo
-
-			fi.commit_modified = client->current_commit;
-
-			int index = search_files(client, name);
-
-			if(index > 0) // arquivo já existe na estrutura
+			if(strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".") == 0)
+				x=1;
+			else
 			{
-				file_info f = client->fileinfo[index];
+				// d_name é o nome do arquivo sem o resto do path. ta de boasssss
+				char copy[256];
+				strcpy(copy, dir->d_name);
+				char *name = strtok(copy, ".");
+				char *extension = strtok(NULL, ".");
+		
+			  	strcpy(fi.name, name);
+			  	strcpy(fi.extension, extension);
+
+			  	// pegar ultima data de modificação do arquivo
+				//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
+				char fullpath[256];
+				strcpy(fullpath, sync_dir);
+				strcat(fullpath, name);
+				strcat(fullpath, ".");
+				strcat(fullpath, extension);
+
+			  	struct stat attrib;
+			  	stat(fullpath, &attrib);
+			  	strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", gmtime(&(attrib.st_mtime)));
+			  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
+			  	fi.size = (int)attrib.st_size;
+
+				//leitura do arquivo está sendo feita neste commit. colocar o commit atual do cliente no arquivo
+
+				fi.commit_modified = client->current_commit;
+
+				int index = search_files(client, name);
+
+				if(index >= 0) // arquivo já existe na estrutura
+				{
+					printf("update na estrutura\n");
+					file_info f = client->fileinfo[index];
 				
-				// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
-				if(file_more_recent_than(&fi, &f))
-					client->fileinfo[index] = fi;
+					// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
+					if(file_more_recent_than(fi, f))
+						memcpy(&client->fileinfo[index], &fi, sizeof(file_info));
+				}
 				else
 				{
 					//arquivo não está na estrutura, adicionar.
@@ -121,7 +129,7 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 		// bota na primeira posição livre que achar.
 		if(strcmp(client->fileinfo[i].name,"\0") == 0)
 		{
-			client->fileinfo[i] = fileinfo;
+			memcpy(&(client->fileinfo[i]), &fileinfo, sizeof(file_info));
 			break;
 		}
 	}
@@ -130,12 +138,12 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 void delete_file_from_client_list(client *client, char filename[MAXNAME])
 {
 	int index = search_files(client, filename);
-	if(index > 0)
+	if(index >= 0)
 		strcpy(client->fileinfo[index].name,"\0");
 }
 
 // retorna 1 se f1 é mais recente que f2. retorna 0  caso contrário
-int file_more_recent_than(file_info *f1, file_info *f2)
+int file_more_recent_than(file_info f1, file_info f2)
 {
 	/* DATE FORMAT
 		"%d-%m-%Y-%H-%M-%S"
@@ -143,9 +151,9 @@ int file_more_recent_than(file_info *f1, file_info *f2)
 	*/
 
 	//copia strings pra não serem destruídas pelo strtok caso seja por ref.
-	char *f1_lm, *f2_lm;
-	strcpy(f1_lm, f1->last_modified);
-	strcpy(f2_lm, f2->last_modified);
+	char f1_lm[256], f2_lm[256];
+	strcpy(f1_lm, f1.last_modified);
+	strcpy(f2_lm, f2.last_modified);
 
 	int f1_day = atoi(strtok(f1_lm, "-"));
 	int f1_month = atoi(strtok(NULL, "-"));

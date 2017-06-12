@@ -57,13 +57,13 @@ void* sync_client(void *socket_sync)
 		// faz isso a cada x segundos:
 		sleep(SLEEP);
 		
-		printf("awake");
+		printf("awake\n");
 		struct client server_mirror;
 		struct file_info *fi;
 	
 		update_client(&self, home);
 	
-		printf("updated client");
+		printf("updated client\n");
 		// envia para o servidor que ele vai começar o sync.
 		bzero(buffer, BUFFER_SIZE);
 		buffer[0] = SYNC;
@@ -83,7 +83,7 @@ void* sync_client(void *socket_sync)
 		read(socketfd, buffer, BUFFER_SIZE);
 		memcpy(&server_mirror, buffer, sizeof(struct client));
 
-		printf("received struct\n");
+		printf("received struct username %s\n", server_mirror.userid);
 	  
 	  	// pra cada arquivo do servidor:
 	  	int i;
@@ -210,7 +210,7 @@ void* sync_client(void *socket_sync)
 
 		while(1)
 		{
-			printf("loop de mandar arquivos pro servidor");
+			printf("loop de mandar arquivos pro servidor\n");
 			bzero(buffer,BUFFER_SIZE);
 
 			char command;
