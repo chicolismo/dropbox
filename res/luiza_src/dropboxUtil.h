@@ -53,7 +53,7 @@ typedef struct connection_info {
 
 void init_client(client *client, char *home, char *login);
 void update_client(client *client, char *home);
-file_info* search_files(client *client, char filename[MAXNAME]);
+int search_files(client *client, char filename[MAXNAME]);
 void insert_file_into_client_list(client *client, file_info fileinfo);
 void delete_file_from_client_list(client *client, char filename[MAXNAME]);
 int file_more_recent_than(file_info *f1, file_info *f2);

@@ -53,43 +53,50 @@ void* sync_client(void *socket_sync)
 
 	while(1)
 	{
+		printf("entrei no while\n");
 		// faz isso a cada x segundos:
 		sleep(SLEEP);
 		
+		printf("awake");
 		struct client server_mirror;
 		struct file_info *fi;
 	
-		char home[256] = "/home/";
-		strcat(home, getlogin());
 		update_client(&self, home);
 	
+		printf("updated client");
 		// envia para o servidor que ele vai começar o sync.
 		bzero(buffer, BUFFER_SIZE);
 		buffer[0] = SYNC;
 		write(socketfd, buffer, BUFFER_SIZE);
+		
+		printf("sent sync\n");
 
 		// envia para o servidor o seu login
 		bzero(buffer,BUFFER_SIZE);
 		memcpy(buffer, self.userid, MAXNAME);
 		write(socketfd, buffer, BUFFER_SIZE);
 
+		printf("sent login\n");
+
 	  	// fica esperando o servidor enviar sua estrutura deste client.
 		bzero(buffer,BUFFER_SIZE);
 		read(socketfd, buffer, BUFFER_SIZE);
 		memcpy(&server_mirror, buffer, sizeof(struct client));
+
+		printf("received struct\n");
 	  
 	  	// pra cada arquivo do servidor:
 	  	int i;
 	  	for(i = 0; i < MAXFILES; i++) 
 		{
-		  	if(strcmp(server_mirror.fileinfo[i].name, "") == 0)
+		  	if(strcmp(server_mirror.fileinfo[i].name, "\0") == 0)
 		       break;
 			else
 		    {
 		    	// arquivo existe no cliente?
-				fi = search_files(&self, server_mirror.fileinfo[i].name);
+				int index = search_files(&self, server_mirror.fileinfo[i].name);
 
-				if(fi != NULL)		// arquivo existe no cliente
+				if(index >= 0)		// arquivo existe no cliente
 				{
 					//verifica se o arquivo no servidor tem commit_created/modified > state do cliente.
 					if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
@@ -124,7 +131,7 @@ void* sync_client(void *socket_sync)
 						receive_file(fullpath, socketfd);
 
 						// atualiza na estrutura do cliente.
-						*fi = f;
+						self.fileinfo[index] = f;
 					}
 				}
 				else				// arquivo não existe no cliente
@@ -178,7 +185,7 @@ void* sync_client(void *socket_sync)
 				}
 		    }
 		}
-		
+
 		// avisa que acabou o seu sync.
 		bzero(buffer, BUFFER_SIZE);
 		buffer[0] = SYNC_END;
@@ -192,13 +199,18 @@ void* sync_client(void *socket_sync)
 
 		// AQUI ETAPA DO SYNC_SERVER!
 		
+		printf("entrando no sync_server\n");
+
 		// envia seu mirror pro servidor
 		bzero(buffer, BUFFER_SIZE);
 		memcpy(buffer, &self, sizeof(struct client));
 		write(socketfd, buffer, BUFFER_SIZE);
 
+		printf("sent struct self\n");
+
 		while(1)
 		{
+			printf("loop de mandar arquivos pro servidor");
 			bzero(buffer,BUFFER_SIZE);
 
 			char command;
@@ -209,22 +221,34 @@ void* sync_client(void *socket_sync)
 
 			if(command == DOWNLOAD)
 			{
-				bzero(buffer,BUFFER_SIZE);
-
 				// recebe nome do arquivo
+				bzero(buffer,BUFFER_SIZE);
 				read(socketfd, buffer, BUFFER_SIZE);
 				memcpy(fname, buffer, MAXNAME);
 				
 				// procura arquivo
-				file_info *f = search_files(&self, fname);
-
-				bzero(buffer,BUFFER_SIZE);
+				int index = search_files(&self, fname);
+				file_info f;
+				if(index >= 0)
+					f = self.fileinfo[index];
 
 				// manda struct
+				bzero(buffer,BUFFER_SIZE);
 				memcpy(buffer, &f, sizeof(file_info));
 				write(socketfd, buffer, BUFFER_SIZE);
 				
 				// manda arquivo
+				char *fullpath;
+				strcat(fullpath, home);
+				strcat(fullpath, "/sync_dir_");
+				strcat(fullpath, self.userid);
+				strcat(fullpath, "/");
+				strcat(fullpath, f.name);
+				strcat(fullpath, ".");
+				strcat(fullpath, f.extension);
+
+				// manda arquivo				
+				send_file(fullpath, socketfd);
 			}
 			else
 				break;
@@ -267,7 +291,9 @@ int main(int argc, char *argv[])
 	// recebe um ok do servidor para continuar a conexão
 	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
-	if(buffer[0] == ACCEPTED)
+	printf("%s\n",buffer);
+
+	if(buffer[0] == 'A')
 		printf("Connected. :)\n");
 	else
 	{

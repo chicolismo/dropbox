@@ -78,18 +78,20 @@ void update_client(client *client, char *home)
 
 			fi.commit_modified = client->current_commit;
 
-			file_info *f = search_files(client, name);
-			if(strcmp(f->name,"\0") != 0)
+			int index = search_files(client, name);
+
+			if(index > 0) // arquivo já existe na estrutura
 			{
-				// arquivo já existe na estrutura
+				file_info f = client->fileinfo[index];
+				
 				// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
-				if(file_more_recent_than(&fi, f))
-					*f = fi;
-			}
-			else
-			{
-				//arquivo não está na estrutura, adicionar.
-				insert_file_into_client_list(client, fi);
+				if(file_more_recent_than(&fi, &f))
+					client->fileinfo[index] = fi;
+				else
+				{
+					//arquivo não está na estrutura, adicionar.
+					insert_file_into_client_list(client, fi);
+				}
 			}
 		  	i++;
 	  }
@@ -97,7 +99,7 @@ void update_client(client *client, char *home)
 	}
 }
 
-file_info* search_files(client *client, char filename[MAXNAME])
+int search_files(client *client, char filename[MAXNAME])
 {
 	int i;
 	for(i = 0; i < MAXFILES; i++)
@@ -105,10 +107,10 @@ file_info* search_files(client *client, char filename[MAXNAME])
 		if(strcmp(client->fileinfo[i].name,"\0") != 0)
 		{
 			if(strcmp(filename, client->fileinfo[i].name) == 0)
-				return &(client->fileinfo[i]);
+				return i;
 		}
 	}
-	return NULL;
+	return -1;
 }
 
 void insert_file_into_client_list(client *client, file_info fileinfo)
@@ -127,8 +129,9 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 
 void delete_file_from_client_list(client *client, char filename[MAXNAME])
 {
-	file_info *f = search_files(client, filename);
-	strcpy(f->name,"\0");
+	int index = search_files(client, filename);
+	if(index > 0)
+		strcpy(client->fileinfo[index].name,"\0");
 }
 
 // retorna 1 se f1 é mais recente que f2. retorna 0  caso contrário

@@ -40,26 +40,46 @@ void list_files(file_info files[256]){
 
 }
 
-
 int return_client(char* user_name, client *new_client){
     client *tempinfo;
+	pthread_mutex_lock(&queue);
 
-	if(FirstFila2(&connected_clients) != 0){
-		do{
-			tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
-			if (strcmp(tempinfo->userid, user_name) == 0){ //mesmo id = já tem um logado
-			        new_client = (client*)(GetAtIteratorFila2(&connected_clients));
-					return ACCEPTED;	
-            }			
-            else{
-					return NOT_VALID;
-	        }
-			
-				
-		}while(NextFila2(&connected_clients) != 0);
-    }
+	FirstFila2(&connected_clients);
+	
+	if(connected_clients.it)
+	{
+		new_client = (client *)GetAtIteratorFila2(&connected_clients);
+		if(new_client)
+		{
+			if (strcmp(new_client->userid, user_name) == 0)
+			{
+				printf("found client\n");
+				printf("%s\n", new_client->userid);
+				pthread_mutex_unlock(&queue);
+				return ACCEPTED;
+			}
+		}
+		
+
+		while(NextFila2(&connected_clients) == 0)
+		{
+			new_client = (client *)GetAtIteratorFila2(&connected_clients);
+			if(new_client)
+			{
+				if (strcmp(new_client->userid, user_name) == 0)
+				{
+					pthread_mutex_unlock(&queue);
+					return ACCEPTED;
+				}
+			}
+		}		
+	}
+
+	// não achou na fila
+	new_client = NULL;
+	pthread_mutex_unlock(&queue);
+	return NOT_VALID;
 }
-
 
 void disconnect_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
@@ -86,34 +106,72 @@ int insert_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
 	
 	//busca se já existe
-	client *tempinfo;
-	if(FirstFila2(&connected_clients) != 0){
-		do{
-			tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
-			if (strcmp(tempinfo->userid, clientinfo->userid) == 0){ //mesmo id = já tem um logado
+	FirstFila2(&connected_clients);
+	
+	if(connected_clients.it)
+	{
+		client *tempinfo = (client *)GetAtIteratorFila2(&connected_clients);
+		if(tempinfo)
+		{
+			if (strcmp(tempinfo->userid, clientinfo->userid) == 0)
+			{
 				if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
+				{	
+					pthread_mutex_unlock(&queue);
 					return NOT_VALID;	
-				else{
+				}
+				else
+				{
 					tempinfo->devices[1] = 1;
+					pthread_mutex_unlock(&queue);
 					return ACCEPTED;
 				}
 			}
-				
-		}while(NextFila2(&connected_clients) != 0);
-	}
-	else{ //fila vazia pode inserir
+		}
+
+		while(NextFila2(&connected_clients) == 0)
+		{
+			tempinfo = (client *)GetAtIteratorFila2(&connected_clients);
+			if(tempinfo)
+			{
+				if (strcmp(tempinfo->userid, clientinfo->userid) == 0)
+				{
+					if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
+					{
+						pthread_mutex_unlock(&queue);
+						return NOT_VALID;	
+					}					
+					else
+					{
+						tempinfo->devices[1] = 1;
+						pthread_mutex_unlock(&queue);
+						return ACCEPTED;
+					}
+				}
+			}
+		}
+
+		//nao achou cliente na fila, insere no fim
 		AppendFila2(&connected_clients, (void*)clientinfo);
 		tempinfo->devices[0] = 1;
+		pthread_mutex_unlock(&queue);
+
+		return ACCEPTED;
+		
+	}
+	else
+	{
+		//fila vazia.
+		
+		clientinfo->devices[0] = 1;
+		AppendFila2(&connected_clients, (void*)clientinfo);
+		pthread_mutex_unlock(&queue);
 		return ACCEPTED;
 	}
-	
-	//nao achou cliente na fila, insere no fim
-	AppendFila2(&connected_clients, (void*)clientinfo);
-	tempinfo->devices[0] = 1;
-	
+
 	pthread_mutex_unlock(&queue);
 
-	return 1;
+	return NOT_VALID;
 }
 
 
@@ -133,24 +191,27 @@ void* run_client(void *conn_info)
 	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(clientid, buffer, MAXNAME);
-	printf("%s\n", buffer);
 
-	client *cli;
-	if(return_client(clientid, cli) == ACCEPTED)
+	client *cli = malloc(sizeof(client));
+	init_client(cli, home, clientid);
+	
+	if(insert_client(cli) == ACCEPTED)
 	{
 		bzero(buffer, BUFFER_SIZE);
-		buffer[0] = ACCEPTED;		
+		buffer[0] = 'A';		
 		write(socketfd, buffer, BUFFER_SIZE);
 	}
 	else
 	{
 		bzero(buffer, BUFFER_SIZE);
-		buffer[0] = NOT_VALID;
+		buffer[0] = 'N';
 		write(socketfd, buffer, BUFFER_SIZE);
 		
 		close(socketfd);
 		pthread_exit(0);
 	}
+
+	printf("EEEEEEEEE\n");
 	
 	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
 	int socket_connection, socket_sync;
@@ -185,7 +246,6 @@ void* run_client(void *conn_info)
 	}
 	
 	// terminou de criar a thread de sync. agora pode executar o loop normal.
-	
  
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
@@ -222,13 +282,14 @@ void* run_client(void *conn_info)
 
 void* run_sync(void *socket_sync)
 {
+	printf("running sync!\n");
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 	char message;
 
 	while(1) {
+		printf("while do sync\n");
 		bzero(buffer, BUFFER_SIZE);
-
 		message = read(socketfd, buffer, BUFFER_SIZE);
 
 		if (message < 0) 
@@ -239,47 +300,62 @@ void* run_sync(void *socket_sync)
 
 			if(message == SYNC)
 			{
+				printf("message == sync\n");
 				char client_id[MAXNAME];
 				//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
 				//pegar os dados do buffer
+				bzero(buffer, BUFFER_SIZE);
 				read(socketfd, buffer, BUFFER_SIZE);
 				memcpy(client_id, buffer, MAXNAME);
-				
-				bzero(buffer,BUFFER_SIZE);
 
+				printf("buff: %s\n", buffer);
+				
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
-				client *cli;
+				client *cli = malloc(sizeof(client));
 				return_client(client_id, cli); 
 
-				memcpy(buffer, cli, sizeof(client));
+				update_client(cli, home);
+			
+				printf("got client! %s\n", cli->userid);
+
+				bzero(buffer,BUFFER_SIZE);
+				memcpy(buffer, cli, sizeof(client *));
 				write(socketfd, buffer, BUFFER_SIZE);
+
+				printf("ok\n");
 
 				// agora fica em um while !finished, fica recebendo comandos de download/delete
 				while(1)
 				{	
-					bzero(buffer,BUFFER_SIZE);
-
+					printf("while dos arquivos\n");
+					
 					char command;
 					char fname[MAXNAME];
 
+					bzero(buffer,BUFFER_SIZE);
 					read(socketfd, buffer, BUFFER_SIZE);
-					memcpy(&command, buffer, 1);
+					command = buffer[0];
+
+					printf("command: %c\n", command);
 
 					if(command == DOWNLOAD)
 					{
-						bzero(buffer,BUFFER_SIZE);
-
+						printf("downloading\n");
 						// recebe nome do arquivo
+						bzero(buffer,BUFFER_SIZE);
 						read(socketfd, buffer, BUFFER_SIZE);
 						memcpy(fname, buffer, MAXNAME);
 						
 						// procura arquivo
-						file_info *f = search_files(cli, fname);
+						int index = search_files(cli, fname);
+						file_info f;
 
-						bzero(buffer,BUFFER_SIZE);
+						if(index >= 0)
+							f = cli->fileinfo[index];
 
 						// manda struct
-						memcpy(buffer, f, sizeof(file_info));
+						bzero(buffer,BUFFER_SIZE);
+						memcpy(buffer, &f, sizeof(file_info));
 						write(socketfd, buffer, BUFFER_SIZE);
 
 						// receive file funciona com full path
@@ -288,9 +364,9 @@ void* run_sync(void *socket_sync)
 						strcat(fullpath, "/sync_dir_");
 						strcat(fullpath, cli->userid);
 						strcat(fullpath, "/");
-						strcat(fullpath, f->name);
+						strcat(fullpath, f.name);
 						strcat(fullpath, ".");
-						strcat(fullpath, f->extension);
+						strcat(fullpath, f.extension);
 
 						// manda arquivo				
 						send_file(fullpath, socketfd);
@@ -304,7 +380,11 @@ void* run_sync(void *socket_sync)
 						memcpy(fname, buffer, MAXNAME);
 
 						// procura arquivo
-						file_info *f = search_files(cli, fname);
+						int index = search_files(cli, fname);
+						file_info f;
+
+						if(index >= 0)
+							f = cli->fileinfo[index];
 
 						// deleta arquivo da pasta sync do server
 						char *fullpath;
@@ -312,9 +392,9 @@ void* run_sync(void *socket_sync)
 						strcpy(fullpath, "/sync_dir_");
 						strcpy(fullpath, cli->userid);
 						strcpy(fullpath, "/");
-						strcpy(fullpath, f->name);
+						strcpy(fullpath, f.name);
 						strcpy(fullpath, ".");
-						strcpy(fullpath, f->extension);
+						strcpy(fullpath, f.extension);
 			
 						remove_file(fullpath);
 
@@ -325,6 +405,7 @@ void* run_sync(void *socket_sync)
 						break;
 				}
 				
+				printf("saí do while\n");
 				// aí executa aqui o sync_server.
 				sync_server(socketfd);
 			}
@@ -334,33 +415,42 @@ void* run_sync(void *socket_sync)
 
 void sync_server(int socketfd)
 {
+
+	printf("entrei no sync_server\n");
 	struct client client_mirror;
-	struct file_info *fi;
 	char buffer[BUFFER_SIZE];
 
 	//server fica esperando o cliente enviar seu mirror
+	bzero(buffer,BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(&client_mirror, buffer, sizeof(struct client));
-	
-	bzero(buffer,BUFFER_SIZE);
+
+	printf("%s\n", client_mirror.userid);
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
-	client *cli;
+	client *cli = malloc(sizeof(client));
 	return_client(client_mirror.userid, cli);
 	update_client(cli, home);
+
+	printf("%s\n", cli->userid);
   
   	// pra cada arquivo do cliente:
   	int i;
   	for(i = 0; i < MAXFILES; i++) 
     {
-      	if(strcmp(client_mirror.fileinfo[i].name, "") == 0)
+		printf("files\n");
+      	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
+		{
+			printf("break\n");
            break;
+		}
     	else
         {
+			printf("stcmp != 0\n");
         	// arquivo existe no servidor?
-			fi = search_files(cli, client_mirror.fileinfo[i].name);
-
-			if(fi != NULL)		// arquivo existe no servidor
+			int index = search_files(cli, client_mirror.fileinfo[i].name);
+			
+			if(index >= 0)		// arquivo existe no servidor
 			{
 				//verifica se o arquivo no cliente tem commit_created/modified > state do servidor.
 				if(client_mirror.fileinfo[i].commit_modified > cli->current_commit)
@@ -372,14 +462,12 @@ void sync_server(int socketfd)
 					write(socketfd, buffer, BUFFER_SIZE);
 
 					bzero(buffer,BUFFER_SIZE);
-
 					memcpy(buffer, &client_mirror.fileinfo[i].name, MAXNAME);
 					write(socketfd, buffer, BUFFER_SIZE);
 		
-					bzero(buffer,BUFFER_SIZE);
-
 					struct file_info f;
 					//fica esperando receber struct
+					bzero(buffer,BUFFER_SIZE);
 					read(socketfd, buffer, BUFFER_SIZE);
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
@@ -397,11 +485,12 @@ void sync_server(int socketfd)
 					receive_file(fullpath, socketfd);
 
 					// atualiza na estrutura do cliente no servidor.
-					*fi = f;
+					cli->fileinfo[index] = f;
 				}
 			}
 			else				// arquivo não existe no servidor
 			{
+				printf("arquivo não tem no servidor\n");
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
 				if(client_mirror.fileinfo[i].commit_modified > cli->current_commit)
 				{
@@ -422,8 +511,20 @@ void sync_server(int socketfd)
 					read(socketfd, buffer, BUFFER_SIZE);
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
+					// receive file funciona com full path
+					char *fullpath;
+					strcat(fullpath, home);
+					strcat(fullpath, "/sync_dir_");
+					strcat(fullpath, cli->userid);
+					strcat(fullpath, "/");
+					strcat(fullpath, f.name);
+					strcat(fullpath, ".");
+					strcat(fullpath, f.extension);
+		
+					printf("receiving path: %s\n", fullpath);
+			
 					//recebe arquivo
-					//TODO
+					receive_file(fullpath, socketfd);
 
 					//bota f na estrutura self
 					insert_file_into_client_list(cli, f);
@@ -434,6 +535,11 @@ void sync_server(int socketfd)
 
 	//avança o estado de commit do cliente no servidor.
 	cli->current_commit += 1;
+
+	// avisa que acabou o seu sync.
+	bzero(buffer, BUFFER_SIZE);
+	buffer[0] = SYNC_END;
+	write(socketfd, buffer, BUFFER_SIZE);
 }
 
 
@@ -442,6 +548,13 @@ int main(int argc, char *argv[])
 	strcpy(home,"/home/");
 	strcat(home, getlogin());
 	strcat(home, "/server");
+
+	struct stat st;
+	if (stat(home, &st) != 0) {
+		  mkdir(home, 0777);
+	}
+		
+	CreateFila2(&connected_clients);
 
 	int socket_connection, socket_client;
 	socklen_t client_len;
@@ -455,13 +568,6 @@ int main(int argc, char *argv[])
         return;
     }
 
-    //inicializa fila de clientes	
-	if(CreateFila2(&connected_clients) != 0){
-		printf("\nInit failed\n");
-		return;
-	}
-
-	
 	if(argc <= MIN_ARG)
 	{
 		printf("Not enough arguments passed.");
@@ -495,8 +601,12 @@ int main(int argc, char *argv[])
 			new_sock = malloc(1);
         	*new_sock = socket_client;
 			pthread_t client_thread;
+
+			connection_info *ci = malloc(sizeof(connection_info));
+			ci->socket_client = socket_client;
+			ci->port = PORT;
 		
-			pthread_create(&client_thread, NULL, run_client, (void*)new_sock);
+			pthread_create(&client_thread, NULL, run_client, (void*)ci);
 		
 			pthread_detach(client_thread);
 
