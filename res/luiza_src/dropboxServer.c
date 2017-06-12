@@ -244,7 +244,7 @@ void* run_sync(void *socket_sync)
 			printf("ERROR reading from socket");
 		else 
 		{
-			memcpy(&message, buffer, 1);
+			message = buffer[0];
 
 			if(message == SYNC)
 			{

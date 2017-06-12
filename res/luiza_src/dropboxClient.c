@@ -62,6 +62,7 @@ void* sync_client(void *socket_sync)
 		struct file_info *fi;
 	
 		update_client(&self, home);
+		printf("file: %s\n", self.fileinfo[0].name);
 	
 		printf("updated client\n");
 		// envia para o servidor que ele vai começar o sync.
