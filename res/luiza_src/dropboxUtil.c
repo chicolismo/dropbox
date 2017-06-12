@@ -82,14 +82,12 @@ void update_client(client *client, char *home)
 
 
 
-				time_t rawtime;
-				struct tm *info;
-				time(&rawtime);
-				info = localtime(&rawtime);
 
-				strftime(fi.last_modified, 256, "%d-%m-%Y-%H-%M-%S", info);
+                
 			  	struct stat attrib;
 			  	stat(fullpath, &attrib);
+                strftime(fi.last_modified, 256, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
+                printf("%s", fi.last_modified);
 			  	//strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
 			  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
 			  	fi.size = (int)attrib.st_size;
