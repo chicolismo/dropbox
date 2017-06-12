@@ -4,10 +4,11 @@
 #include "dropboxServer.h"
 #include "dropboxUtil.h"
 //#include "../../include/fila2.h"
-#include "fila2.h"
+//#include "fila2.h"
 
 pthread_mutex_t queue;
-FILA2 connected_clients;
+//FILA2 connected_clients;
+client connected_clients[256];
 char home[256];
 
 /*
@@ -40,62 +41,44 @@ void list_files(file_info files[256]){
 
 }
 
+//-1 se nao achou o cliente i>=0 com o cliente na estrutura se achou
 int return_client(char* user_name, client *new_client){
-    client *tempinfo;
-	pthread_mutex_lock(&queue);
+    int i;	
+    pthread_mutex_lock(&queue);
 
-	FirstFila2(&connected_clients);
-	
-	if(connected_clients.it)
-	{
-		new_client = (client *)GetAtIteratorFila2(&connected_clients);
-		if(new_client)
-		{
-			if (strcmp(new_client->userid, user_name) == 0)
-			{
-				printf("found client\n");
-				printf("%s\n", new_client->userid);
-				pthread_mutex_unlock(&queue);
-				return ACCEPTED;
-			}
-		}
-		
-
-		while(NextFila2(&connected_clients) == 0)
-		{
-			new_client = (client *)GetAtIteratorFila2(&connected_clients);
-			if(new_client)
-			{
-				if (strcmp(new_client->userid, user_name) == 0)
-				{
-					pthread_mutex_unlock(&queue);
-					return ACCEPTED;
-				}
-			}
-		}		
-	}
-
-	// não achou na fila
-	new_client = NULL;
-	pthread_mutex_unlock(&queue);
-	return NOT_VALID;
+    for(i=0;i<256;i++){
+        if(connected_clients[i].logged_in == 1){
+            if(strcmp(user_name, connected_clients[i].userid) == 0){
+                pthread_mutex_unlock(&queue);
+                return i;
+            }
+        }
+    }
+    pthread_mutex_unlock(&queue);
+    return -1;
 }
 
+
+
+
 void disconnect_client(client *clientinfo){
+    int i;
 	pthread_mutex_lock(&queue);
+
 	
-	client *tempinfo;
-	tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
-	while(strcmp(tempinfo->userid, clientinfo->userid) != 0){
-		NextFila2(&connected_clients);
-		tempinfo = (client*)(GetAtIteratorFila2(&connected_clients));
-	}
+	for(i=0;i<256;i++){
+        if(connected_clients[i].logged_in == 1){
+            if(strcmp(clientinfo->userid, connected_clients[i].userid) == 0){
+                break;
+            }
+        }
+    }
 		
 	//se tem dois conectados, disconecta um
-	if(tempinfo->devices[1] == 1)
-		tempinfo->devices[1] = 0;
-	else //se não, remove a estrutura
-		DeleteAtIteratorFila2(&connected_clients);
+	if(connected_clients[i].devices[1] == 1)
+		connected_clients[i].devices[1] = 0;
+	else //se não, desloga
+		connected_clients[i].logged_in = 0;
 		
 	pthread_mutex_unlock(&queue);
 }
@@ -104,74 +87,27 @@ void disconnect_client(client *clientinfo){
 
 int insert_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
-	
-	//busca se já existe
-	FirstFila2(&connected_clients);
-	
-	if(connected_clients.it)
-	{
-		client *tempinfo = (client *)GetAtIteratorFila2(&connected_clients);
-		if(tempinfo)
-		{
-			if (strcmp(tempinfo->userid, clientinfo->userid) == 0)
-			{
-				if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
-				{	
-					pthread_mutex_unlock(&queue);
-					return NOT_VALID;	
-				}
-				else
-				{
-					tempinfo->devices[1] = 1;
-					pthread_mutex_unlock(&queue);
-					return ACCEPTED;
-				}
-			}
-		}
+    int i;
 
-		while(NextFila2(&connected_clients) == 0)
-		{
-			tempinfo = (client *)GetAtIteratorFila2(&connected_clients);
-			if(tempinfo)
-			{
-				if (strcmp(tempinfo->userid, clientinfo->userid) == 0)
-				{
-					if(tempinfo->devices[1] == 1) //terceiro cliente não pode logar
-					{
-						pthread_mutex_unlock(&queue);
-						return NOT_VALID;	
-					}					
-					else
-					{
-						tempinfo->devices[1] = 1;
-						pthread_mutex_unlock(&queue);
-						return ACCEPTED;
-					}
-				}
-			}
-		}
 
-		//nao achou cliente na fila, insere no fim
-		AppendFila2(&connected_clients, (void*)clientinfo);
-		tempinfo->devices[0] = 1;
-		pthread_mutex_unlock(&queue);
+    for(i=0;i<256;i++){
+        if(connected_clients[i].logged_in == 1){
+            if(strcmp(clientinfo->userid, connected_clients[i].userid) == 0){
+                connected_clients[i].devices[1] = 1; //ja esta conectado, ativar segundo device
+                return ACCEPTED;
+            }
+        }
+    }
 
-		return ACCEPTED;
-		
-	}
-	else
-	{
-		//fila vazia.
-		
-		clientinfo->devices[0] = 1;
-		AppendFila2(&connected_clients, (void*)clientinfo);
-		pthread_mutex_unlock(&queue);
-		return ACCEPTED;
-	}
+    //primeiro a conectar, inserir
+    while(connected_clients[i].logged_in == 1){
+        i++;
+    }
+    memcpy(&connected_clients[i], &clientinfo, sizeof(client));
+    return ACCEPTED;
 
+    
 	pthread_mutex_unlock(&queue);
-
-	return NOT_VALID;
 }
 
 
@@ -554,7 +490,6 @@ int main(int argc, char *argv[])
 		  mkdir(home, 0777);
 	}
 		
-	CreateFila2(&connected_clients);
 
 	int socket_connection, socket_client;
 	socklen_t client_len;
@@ -565,7 +500,7 @@ int main(int argc, char *argv[])
     if (pthread_mutex_init(&queue, NULL) != 0)
     {
         printf("\nMutex (queue) init failed\n");
-        return;
+        return 0;
     }
 
 	if(argc <= MIN_ARG)
