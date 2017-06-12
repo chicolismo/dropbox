@@ -119,8 +119,8 @@ void* sync_client(void *socket_sync)
 						memcpy(&f, buffer, sizeof(struct file_info));
 
 						// receive file funciona com full path
-						char *fullpath;
-						strcat(fullpath, home);
+						char fullpath[256];
+						strcpy(fullpath, home);
 						strcat(fullpath, "/sync_dir_");
 						strcat(fullpath, self.userid);
 						strcat(fullpath, "/");
@@ -157,8 +157,8 @@ void* sync_client(void *socket_sync)
 						memcpy(&f, buffer, sizeof(struct file_info));
 				
 						// receive file funciona com full path
-						char *fullpath;
-						strcat(fullpath, home);
+						char fullpath[256];
+						strcpy(fullpath, home);
 						strcat(fullpath, "/sync_dir_");
 						strcat(fullpath, self.userid);
 						strcat(fullpath, "/");
@@ -239,8 +239,8 @@ void* sync_client(void *socket_sync)
 				write(socketfd, buffer, BUFFER_SIZE);
 				
 				// manda arquivo
-				char *fullpath;
-				strcat(fullpath, home);
+				char fullpath[256];
+				strcpy(fullpath, home);
 				strcat(fullpath, "/sync_dir_");
 				strcat(fullpath, self.userid);
 				strcat(fullpath, "/");

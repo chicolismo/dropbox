@@ -398,14 +398,14 @@ void sync_server(int socketfd)
 		}
     	else
         {
-			printf("stcmp != 0\n");
         	// arquivo existe no servidor?
-			int index = search_files(cli, client_mirror.fileinfo[i].name);
+			int index = search_files(&(connected_clients[cliindex]), client_mirror.fileinfo[i].name);
 			
 			if(index >= 0)		// arquivo existe no servidor
 			{
+				printf("arquivo existe aqui\n");
 				//verifica se o arquivo no cliente tem commit_created/modified > state do servidor.
-				if(client_mirror.fileinfo[i].commit_modified > cli->current_commit)
+				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].current_commit)
 				{
 					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 					// pede para o cliente mandar o arquivo
@@ -424,10 +424,10 @@ void sync_server(int socketfd)
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
 					// receive file funciona com full path
-					char *fullpath;
-					strcat(fullpath, home);
+					char fullpath[256];
+					strcpy(fullpath, home);
 					strcat(fullpath, "/sync_dir_");
-					strcat(fullpath, cli->userid);
+					strcat(fullpath, connected_clients[cliindex].userid);
 					strcat(fullpath, "/");
 					strcat(fullpath, f.name);
 					strcat(fullpath, ".");
@@ -437,25 +437,29 @@ void sync_server(int socketfd)
 					receive_file(fullpath, socketfd);
 
 					// atualiza na estrutura do cliente no servidor.
-					cli->fileinfo[index] = f;
+					memcpy(&connected_clients[cliindex].fileinfo[index], &f, sizeof(file_info));
 				}
 			}
 			else				// arquivo não existe no servidor
 			{
 				printf("arquivo não tem no servidor\n");
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
-				if(client_mirror.fileinfo[i].commit_modified > cli->current_commit)
+				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].current_commit)
 				{
+					printf("dentro do if\n");
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
 					buffer[0] = DOWNLOAD;
 					write(socketfd, buffer, BUFFER_SIZE);
 
-					bzero(buffer,BUFFER_SIZE);
+					printf("mandei dw\n");
 
-					memcpy(buffer, &client_mirror.fileinfo[i].name, MAXNAME);
+					bzero(buffer,BUFFER_SIZE);
+					memcpy(buffer, client_mirror.fileinfo[i].name, MAXNAME);
 					write(socketfd, buffer, BUFFER_SIZE);
+
+					printf("mandei arquivo\n");
 
 					struct file_info f;
 					//fica esperando receber struct
@@ -464,10 +468,10 @@ void sync_server(int socketfd)
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
 					// receive file funciona com full path
-					char *fullpath;
-					strcat(fullpath, home);
+					char fullpath[256];
+					strcpy(fullpath, home);
 					strcat(fullpath, "/sync_dir_");
-					strcat(fullpath, cli->userid);
+					strcat(fullpath, connected_clients[cliindex].userid);
 					strcat(fullpath, "/");
 					strcat(fullpath, f.name);
 					strcat(fullpath, ".");
@@ -479,14 +483,14 @@ void sync_server(int socketfd)
 					receive_file(fullpath, socketfd);
 
 					//bota f na estrutura self
-					insert_file_into_client_list(cli, f);
+					insert_file_into_client_list(&(connected_clients[cliindex]), f);
 				}
 			}
         }
     }
 
 	//avança o estado de commit do cliente no servidor.
-	cli->current_commit += 1;
+	connected_clients[cliindex].current_commit += 1;
 
 	// avisa que acabou o seu sync.
 	bzero(buffer, BUFFER_SIZE);
