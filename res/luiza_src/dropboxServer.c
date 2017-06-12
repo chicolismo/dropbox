@@ -11,18 +11,6 @@ pthread_mutex_t queue;
 client connected_clients[256];
 char home[256];
 
-/*
-	TODO:
-		- NO SYNC_SERVER:
-			- deletar arquivo da pasta sync_dir_<user> do servidor
-			- chamar função de deletar arquivo n da estrutura do cliente
-		- @LARISSA: colocar tuas funções aqui dentro do dropboxServer.c
-		- criar no loop o comando list
-		
-		DEPOIS QUE ARRUMAR ISSO TUDO:
-		- ver os mutex!
-*/
-
 void list_files(file_info files[256]){
     int i;
     char filename[256];      
@@ -237,6 +225,12 @@ void* run_sync(void *socket_sync)
 
 	while(1) {
 		printf("while do sync\n");
+
+		// aí executa aqui o sync_server.
+		sync_server(socketfd);
+
+		// aí aqui executa o loop de aceite do sync_client
+
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, BUFFER_SIZE);
 
@@ -355,8 +349,6 @@ void* run_sync(void *socket_sync)
 				}
 				
 				printf("saí do while\n");
-				// aí executa aqui o sync_server.
-				sync_server(socketfd);
 			}
 		}
 	}
@@ -375,7 +367,7 @@ void sync_server(int socketfd)
 	memcpy(&client_mirror, buffer, sizeof(struct client));
 
 	printf("mirror %s\n", client_mirror.userid);
-
+	printf("files: %s %s %s\n", client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name, client_mirror.fileinfo[2].name);
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli = malloc(sizeof(client));
 	int cliindex = return_client(client_mirror.userid, cli); 
@@ -400,6 +392,7 @@ void sync_server(int socketfd)
         {
         	// arquivo existe no servidor?
 			int index = search_files(&(connected_clients[cliindex]), client_mirror.fileinfo[i].name);
+			printf("index %d\n", index);
 			
 			if(index >= 0)		// arquivo existe no servidor
 			{
@@ -437,7 +430,7 @@ void sync_server(int socketfd)
 					receive_file(fullpath, socketfd);
 
 					// atualiza na estrutura do cliente no servidor.
-					memcpy(&connected_clients[cliindex].fileinfo[index], &f, sizeof(file_info));
+					memcpy(&(connected_clients[cliindex].fileinfo[index]), &f, sizeof(file_info));
 				}
 			}
 			else				// arquivo não existe no servidor
@@ -502,7 +495,7 @@ void sync_server(int socketfd)
 int main(int argc, char *argv[])
 {
     int i;
-	strcpy(home,"/home/");
+	strcpy(home,"/home/grad/");
 	strcat(home, getlogin());
 	strcat(home, "/server");
 

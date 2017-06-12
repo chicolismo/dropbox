@@ -45,7 +45,7 @@ void update_client(client *client, char *home)
 	strcpy(sync_dir,home);
 	strcat(sync_dir,"/sync_dir_");
 	strcat(sync_dir,client->userid);
- 
+
 	struct dirent *dir;	
 	DIR *d;
 	
@@ -56,7 +56,6 @@ void update_client(client *client, char *home)
 	  int i = 0;
 	  while ((dir = readdir(d)) != NULL)
 	  {
-			printf("%s\n",dir->d_name);
 			struct file_info fi;
 			
 			if(strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".") == 0)
@@ -76,18 +75,14 @@ void update_client(client *client, char *home)
 				//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
 				char fullpath[256];
 				strcpy(fullpath, sync_dir);
+				strcat(fullpath, "/");
 				strcat(fullpath, name);
 				strcat(fullpath, ".");
 				strcat(fullpath, extension);
 
-
-
-
-                
 			  	struct stat attrib;
 			  	stat(fullpath, &attrib);
-                strftime(fi.last_modified, 256, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
-                printf("%s", fi.last_modified);
+                strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_mtime)));
 			  	//strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
 			  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
 			  	fi.size = (int)attrib.st_size;
@@ -108,6 +103,7 @@ void update_client(client *client, char *home)
 					{
 						printf("updated file\n");
 						memcpy(&client->fileinfo[index], &fi, sizeof(file_info));
+						printf("fileinfo: %s %s %d\n", client->fileinfo[index].name, client->fileinfo[index].extension, client->fileinfo[index].commit_modified);
 					}
 				}
 				else
@@ -138,16 +134,29 @@ int search_files(client *client, char filename[MAXNAME])
 
 void insert_file_into_client_list(client *client, file_info fileinfo)
 {
-	int i;
-	for(i = 0; i < MAXFILES; i++)
+	int i = 0;
+
+	while(strcmp(client->fileinfo[i].name,"\0") != 0)
+		i++;
+
+	memcpy(&client->fileinfo[i], &fileinfo, sizeof(file_info));
+	//printf("file: %s\n",client->fileinfo[i].name);
+	printf("fileinfo %d: %s %s %d\n", i, client->fileinfo[i].name, client->fileinfo[i].extension, client->fileinfo[i].commit_modified);
+	
+	
+	/*for(i = 0; i < MAXFILES; i++)
 	{
 		// bota na primeira posição livre que achar.
 		if(strcmp(client->fileinfo[i].name,"\0") == 0)
 		{
-			memcpy(&(client->fileinfo[i]), &fileinfo, sizeof(file_info));
+			printf("inserted file into client list\n");
+			
+			memcpy(&client->fileinfo[i], &fileinfo, sizeof(file_info));
+			//printf("file: %s\n",client->fileinfo[i].name);
+			printf("fileinfo: %s %s %d\n", client->fileinfo[i].name, client->fileinfo[i].extension, client->fileinfo[i].commit_modified);
 			break;
 		}
-	}
+	}*/
 }
 
 void delete_file_from_client_list(client *client, char filename[MAXNAME])

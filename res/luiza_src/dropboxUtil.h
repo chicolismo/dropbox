@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 8192
 #define MAXNAME 256
 #define MAXFILES 30
 #define SLEEP 30

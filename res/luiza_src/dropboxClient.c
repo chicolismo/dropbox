@@ -51,6 +51,8 @@ void* sync_client(void *socket_sync)
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 
+	// executa primeiro o sync server para não haver problemas
+
 	while(1)
 	{
 		printf("entrei no while\n");
@@ -58,11 +60,72 @@ void* sync_client(void *socket_sync)
 		sleep(SLEEP);
 		
 		printf("awake\n");
+
+		// AQUI ETAPA DO SYNC_SERVER!
+		
+		printf("entrando no sync_server\n");
+
+		update_client(&self, home);
+
+		// envia seu mirror pro servidor
+		bzero(buffer, BUFFER_SIZE);
+		memcpy(buffer, &self, sizeof(struct client));
+		write(socketfd, buffer, BUFFER_SIZE);
+
+		printf("sent struct self\n");
+
+		while(1)
+		{
+			printf("loop de mandar arquivos pro servidor\n");
+			bzero(buffer,BUFFER_SIZE);
+
+			char command;
+			char fname[MAXNAME];
+
+			read(socketfd, buffer, BUFFER_SIZE);
+			memcpy(&command, buffer, 1);
+
+			if(command == DOWNLOAD)
+			{
+				// recebe nome do arquivo
+				bzero(buffer,BUFFER_SIZE);
+				read(socketfd, buffer, BUFFER_SIZE);
+				memcpy(fname, buffer, MAXNAME);
+				
+				// procura arquivo
+				int index = search_files(&self, fname);
+				file_info f;
+				if(index >= 0)
+					f = self.fileinfo[index];
+
+				// manda struct
+				bzero(buffer,BUFFER_SIZE);
+				memcpy(buffer, &f, sizeof(file_info));
+				write(socketfd, buffer, BUFFER_SIZE);
+				
+				// manda arquivo
+				char fullpath[256];
+				strcpy(fullpath, home);
+				strcat(fullpath, "/sync_dir_");
+				strcat(fullpath, self.userid);
+				strcat(fullpath, "/");
+				strcat(fullpath, f.name);
+				strcat(fullpath, ".");
+				strcat(fullpath, f.extension);
+
+				// manda arquivo				
+				send_file(fullpath, socketfd);
+			}
+			else
+				break;
+		}
+
+		// AGORA FAZ SYNC_CLIENT
+
 		struct client server_mirror;
 		struct file_info *fi;
 	
 		update_client(&self, home);
-		printf("file: %s\n", self.fileinfo[0].name);
 	
 		printf("updated client\n");
 		// envia para o servidor que ele vai começar o sync.
@@ -198,62 +261,6 @@ void* sync_client(void *socket_sync)
 		else
 			self.current_commit += 1;
 
-		// AQUI ETAPA DO SYNC_SERVER!
-		
-		printf("entrando no sync_server\n");
-
-		// envia seu mirror pro servidor
-		bzero(buffer, BUFFER_SIZE);
-		memcpy(buffer, &self, sizeof(struct client));
-		write(socketfd, buffer, BUFFER_SIZE);
-
-		printf("sent struct self\n");
-
-		while(1)
-		{
-			printf("loop de mandar arquivos pro servidor\n");
-			bzero(buffer,BUFFER_SIZE);
-
-			char command;
-			char fname[MAXNAME];
-
-			read(socketfd, buffer, BUFFER_SIZE);
-			memcpy(&command, buffer, 1);
-
-			if(command == DOWNLOAD)
-			{
-				// recebe nome do arquivo
-				bzero(buffer,BUFFER_SIZE);
-				read(socketfd, buffer, BUFFER_SIZE);
-				memcpy(fname, buffer, MAXNAME);
-				
-				// procura arquivo
-				int index = search_files(&self, fname);
-				file_info f;
-				if(index >= 0)
-					f = self.fileinfo[index];
-
-				// manda struct
-				bzero(buffer,BUFFER_SIZE);
-				memcpy(buffer, &f, sizeof(file_info));
-				write(socketfd, buffer, BUFFER_SIZE);
-				
-				// manda arquivo
-				char fullpath[256];
-				strcpy(fullpath, home);
-				strcat(fullpath, "/sync_dir_");
-				strcat(fullpath, self.userid);
-				strcat(fullpath, "/");
-				strcat(fullpath, f.name);
-				strcat(fullpath, ".");
-				strcat(fullpath, f.extension);
-
-				// manda arquivo				
-				send_file(fullpath, socketfd);
-			}
-			else
-				break;
-		}
 	}
 }
 
@@ -272,7 +279,7 @@ int main(int argc, char *argv[])
 
 	printf("1\n");
 
-	strcat(home,"/home/");
+	strcat(home,"/home/grad/");
 	strcat(home, getlogin());
 
 	printf("%s\n", home);
