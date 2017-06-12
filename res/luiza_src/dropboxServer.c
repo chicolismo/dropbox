@@ -444,7 +444,7 @@ void sync_server(int socketfd)
 			{
 				printf("arquivo não tem no servidor\n");
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
-				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].current_commit)
+				if(client_mirror.fileinfo[i].commit_modified >= connected_clients[cliindex].current_commit)
 				{
 					printf("dentro do if\n");
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.

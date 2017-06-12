@@ -80,9 +80,17 @@ void update_client(client *client, char *home)
 				strcat(fullpath, ".");
 				strcat(fullpath, extension);
 
+
+
+				time_t rawtime;
+				struct tm *info;
+				time(&rawtime);
+				info = localtime(&rawtime);
+
+				strftime(fi.last_modified, 256, "%d-%m-%Y-%H-%M-%S", info);
 			  	struct stat attrib;
 			  	stat(fullpath, &attrib);
-			  	strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", gmtime(&(attrib.st_mtime)));
+			  	//strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
 			  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
 			  	fi.size = (int)attrib.st_size;
 
@@ -98,8 +106,11 @@ void update_client(client *client, char *home)
 					file_info f = client->fileinfo[index];
 				
 					// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
-					if(file_more_recent_than(fi, f))
+					if(file_more_recent_than(fi, f)) 
+					{
+						printf("updated file\n");
 						memcpy(&client->fileinfo[index], &fi, sizeof(file_info));
+					}
 				}
 				else
 				{
@@ -160,6 +171,8 @@ int file_more_recent_than(file_info f1, file_info f2)
 	char f1_lm[256], f2_lm[256];
 	strcpy(f1_lm, f1.last_modified);
 	strcpy(f2_lm, f2.last_modified);
+
+	printf("d1 %s d2 %s\n", f1_lm, f2_lm);
 
 	int f1_day = atoi(strtok(f1_lm, "-"));
 	int f1_month = atoi(strtok(NULL, "-"));

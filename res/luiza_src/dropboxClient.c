@@ -100,7 +100,7 @@ void* sync_client(void *socket_sync)
 				if(index >= 0)		// arquivo existe no cliente
 				{
 					//verifica se o arquivo no servidor tem commit_created/modified > state do cliente.
-					if(server_mirror.fileinfo[i].commit_modified >= self.current_commit)
+					if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
 					{
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
@@ -138,7 +138,7 @@ void* sync_client(void *socket_sync)
 				else				// arquivo não existe no cliente
 				{
 					// verifica se o arquivo no servidor tem um commit_modified > state do cliente
-					if(server_mirror.fileinfo[i].commit_modified >= self.current_commit)
+					if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
 					{
 						//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 						// pede para o servidor mandar o arquivo
