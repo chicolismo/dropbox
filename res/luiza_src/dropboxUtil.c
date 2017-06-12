@@ -30,7 +30,7 @@ void init_client(client *client, char *home, char *login)
     if (pthread_mutex_init(&(client->mutex), NULL) != 0)
     {
         printf("\nMutex (queue) init failed\n");
-        return 0;
+        return;
     }
 
 	update_client(client, home);
@@ -224,6 +224,12 @@ void receive_file(char* file_name, int client_socket)
 {
     char buffer[256], char_buffer[1];
     int error;
+
+	struct stat st;
+	if (stat(file_name, &st) == 0) {
+		  unlink(file_name);
+	}
+
     FILE *fp;
 
     //printf("%s", file_name);
@@ -242,7 +248,7 @@ void receive_file(char* file_name, int client_socket)
         
 	}
 
-    fclose(file_name);
+    fclose(fp);
     
 }
 
@@ -270,7 +276,7 @@ void send_file(char *file, int server_socket)
     bzero(cb, 1);
     cb[0] = char_buffer;
     write(server_socket, cb, 1);
-    fclose(file);
+    fclose(fp);
 }
 
 

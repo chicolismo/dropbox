@@ -296,11 +296,11 @@ void* run_sync(void *socket_sync)
 						memcpy(fname, buffer, MAXNAME);
 						
 						// procura arquivo
-						int index = search_files(cli, fname);
+						int index = search_files(&(connected_clients[cliindex]), fname);
 						file_info f;
 
 						if(index >= 0)
-							f = cli->fileinfo[index];
+							f = connected_clients[cliindex].fileinfo[index];
 
 						// manda struct
 						bzero(buffer,BUFFER_SIZE);
@@ -308,10 +308,10 @@ void* run_sync(void *socket_sync)
 						write(socketfd, buffer, BUFFER_SIZE);
 
 						// receive file funciona com full path
-						char *fullpath;
-						strcat(fullpath, home);
+						char fullpath[256];
+						strcpy(fullpath, home);
 						strcat(fullpath, "/sync_dir_");
-						strcat(fullpath, cli->userid);
+						strcat(fullpath, connected_clients[cliindex].userid);
 						strcat(fullpath, "/");
 						strcat(fullpath, f.name);
 						strcat(fullpath, ".");
@@ -333,22 +333,22 @@ void* run_sync(void *socket_sync)
 						file_info f;
 
 						if(index >= 0)
-							f = cli->fileinfo[index];
+							f = connected_clients[cliindex].fileinfo[index];
 
 						// deleta arquivo da pasta sync do server
-						char *fullpath;
+						char fullpath[256];
 						strcpy(fullpath, home);
-						strcpy(fullpath, "/sync_dir_");
-						strcpy(fullpath, cli->userid);
-						strcpy(fullpath, "/");
-						strcpy(fullpath, f.name);
-						strcpy(fullpath, ".");
-						strcpy(fullpath, f.extension);
+						strcat(fullpath, "/sync_dir_");
+						strcat(fullpath, connected_clients[cliindex].userid);
+						strcat(fullpath, "/");
+						strcat(fullpath, f.name);
+						strcat(fullpath, ".");
+						strcat(fullpath, f.extension);
 			
 						remove_file(fullpath);
 
 						// deleta estrutura da lista de arquivos do cliente
-						delete_file_from_client_list(cli, fname);
+						delete_file_from_client_list(&(connected_clients[cliindex]), fname);
 					}
 					else
 						break;
@@ -405,7 +405,7 @@ void sync_server(int socketfd)
 			{
 				printf("arquivo existe aqui\n");
 				//verifica se o arquivo no cliente tem commit_created/modified > state do servidor.
-				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].current_commit)
+				if(client_mirror.fileinfo[i].commit_modified >= connected_clients[cliindex].current_commit)
 				{
 					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 					// pede para o cliente mandar o arquivo
