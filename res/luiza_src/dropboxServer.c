@@ -481,6 +481,7 @@ void sync_server(int socketfd)
 
 int main(int argc, char *argv[])
 {
+    int i;
 	strcpy(home,"/home/");
 	strcat(home, getlogin());
 	strcat(home, "/server");
@@ -490,6 +491,9 @@ int main(int argc, char *argv[])
 		  mkdir(home, 0777);
 	}
 		
+	for(i=0;i<256;i++){
+        connected_clients[i].logged_in = 0;
+    }   
 
 	int socket_connection, socket_client;
 	socklen_t client_len;
