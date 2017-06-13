@@ -397,10 +397,10 @@ void sync_server(int socketfd)
 			if(index >= 0)		// arquivo existe no servidor
 			{
 				printf("arquivo existe aqui\n");
-				//verifica se o arquivo no cliente tem commit_created/modified > state do servidor.
-				if(client_mirror.fileinfo[i].commit_modified >= connected_clients[cliindex].current_commit)
+				//verifica se o arquivo no cliente é mais atual que o arquivo no servidor.
+				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].fileinfo[index].commit_modified)
 				{
-					//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
+					//isso quer dizer que o arquivo no cliente é mais atual que o arquivo deste cliente no servidor. deve ser baixado, portanto.
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
 					buffer[0] = DOWNLOAD;
@@ -437,7 +437,7 @@ void sync_server(int socketfd)
 			{
 				printf("arquivo não tem no servidor\n");
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
-				if(client_mirror.fileinfo[i].commit_modified >= connected_clients[cliindex].current_commit)
+				if(client_mirror.current_commit == connected_clients[cliindex].current_commit)
 				{
 					printf("dentro do if\n");
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
@@ -477,6 +477,10 @@ void sync_server(int socketfd)
 
 					//bota f na estrutura self
 					insert_file_into_client_list(&(connected_clients[cliindex]), f);
+				}
+				else
+				{
+					// deleta arquivo no cliente.
 				}
 			}
         }
