@@ -302,7 +302,7 @@ void* run_sync(void *socket_sync)
 						write(socketfd, buffer, BUFFER_SIZE);
 
 						// receive file funciona com full path
-						char fullpath[256];
+						char fullpath[MAXNAME];
 						strcpy(fullpath, home);
 						strcat(fullpath, "/sync_dir_");
 						strcat(fullpath, connected_clients[cliindex].userid);
@@ -323,14 +323,14 @@ void* run_sync(void *socket_sync)
 						memcpy(fname, buffer, MAXNAME);
 
 						// procura arquivo
-						int index = search_files(cli, fname);
+						int index = search_files(&(connected_clients[cliindex]), fname);
 						file_info f;
 
 						if(index >= 0)
 							f = connected_clients[cliindex].fileinfo[index];
 
 						// deleta arquivo da pasta sync do server
-						char fullpath[256];
+						char fullpath[MAXNAME];
 						strcpy(fullpath, home);
 						strcat(fullpath, "/sync_dir_");
 						strcat(fullpath, connected_clients[cliindex].userid);
@@ -366,8 +366,6 @@ void sync_server(int socketfd)
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(&client_mirror, buffer, sizeof(struct client));
 
-	printf("mirror %s\n", client_mirror.userid);
-	printf("files: %s %s %s\n", client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name, client_mirror.fileinfo[2].name);
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli = malloc(sizeof(client));
 	int cliindex = return_client(client_mirror.userid, cli); 
@@ -375,14 +373,10 @@ void sync_server(int socketfd)
 	update_client(&(connected_clients[cliindex]), home);
 	client c = connected_clients[cliindex];
 
-	printf("%s\n", c.userid);
-  
   	// pra cada arquivo do cliente:
   	int i;
   	for(i = 0; i < MAXFILES; i++) 
     {
-		printf("files\n");
-		printf("file: %s\n", client_mirror.fileinfo[i].name);
       	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
 		{
 			printf("break\n");
@@ -392,11 +386,10 @@ void sync_server(int socketfd)
         {
         	// arquivo existe no servidor?
 			int index = search_files(&(connected_clients[cliindex]), client_mirror.fileinfo[i].name);
-			printf("index %d\n", index);
 			
 			if(index >= 0)		// arquivo existe no servidor
 			{
-				printf("arquivo existe aqui\n");
+				printf("arquivo existe no server\n");
 				//verifica se o arquivo no cliente é mais atual que o arquivo no servidor.
 				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].fileinfo[index].commit_modified)
 				{
@@ -417,7 +410,7 @@ void sync_server(int socketfd)
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
 					// receive file funciona com full path
-					char fullpath[256];
+					char fullpath[MAXNAME];
 					strcpy(fullpath, home);
 					strcat(fullpath, "/sync_dir_");
 					strcat(fullpath, connected_clients[cliindex].userid);
@@ -439,20 +432,15 @@ void sync_server(int socketfd)
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
 				if(client_mirror.current_commit == connected_clients[cliindex].current_commit)
 				{
-					printf("dentro do if\n");
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
 					buffer[0] = DOWNLOAD;
 					write(socketfd, buffer, BUFFER_SIZE);
 
-					printf("mandei dw\n");
-
 					bzero(buffer,BUFFER_SIZE);
 					memcpy(buffer, client_mirror.fileinfo[i].name, MAXNAME);
 					write(socketfd, buffer, BUFFER_SIZE);
-
-					printf("mandei arquivo\n");
 
 					struct file_info f;
 					//fica esperando receber struct
@@ -461,7 +449,7 @@ void sync_server(int socketfd)
 					memcpy(&f, buffer, sizeof(struct file_info));
 				
 					// receive file funciona com full path
-					char fullpath[256];
+					char fullpath[MAXNAME];
 					strcpy(fullpath, home);
 					strcat(fullpath, "/sync_dir_");
 					strcat(fullpath, connected_clients[cliindex].userid);
@@ -481,6 +469,14 @@ void sync_server(int socketfd)
 				else
 				{
 					// deleta arquivo no cliente.
+					// o arquivo é velho e deve ser deletado do servidor adequadamente.
+					bzero(buffer, BUFFER_SIZE);
+					buffer[0] = DELETE;
+					write(socketfd, buffer, BUFFER_SIZE);
+
+					bzero(buffer,BUFFER_SIZE);
+					memcpy(buffer, &connected_clients[cliindex].fileinfo[i].name, MAXNAME);
+					write(socketfd, buffer, BUFFER_SIZE);
 				}
 			}
         }
@@ -499,7 +495,7 @@ void sync_server(int socketfd)
 int main(int argc, char *argv[])
 {
     int i;
-	strcpy(home,"/home/grad/");
+	strcpy(home,"/home/");
 	strcat(home, getlogin());
 	strcat(home, "/server");
 

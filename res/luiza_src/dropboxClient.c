@@ -116,6 +116,36 @@ void* sync_client(void *socket_sync)
 				// manda arquivo				
 				send_file(fullpath, socketfd);
 			}
+			else if(command == DELETE)
+			{
+				bzero(buffer,BUFFER_SIZE);
+
+				// recebe nome do arquivo
+				read(socketfd, buffer, BUFFER_SIZE);
+				memcpy(fname, buffer, MAXNAME);
+
+				// procura arquivo
+				int index = search_files(&self, fname);
+				file_info f;
+
+				if(index >= 0)
+					f = self.fileinfo[index];
+
+				// deleta arquivo da pasta sync do server
+				char fullpath[256];
+				strcpy(fullpath, home);
+				strcat(fullpath, "/sync_dir_");
+				strcat(fullpath, self.userid);
+				strcat(fullpath, "/");
+				strcat(fullpath, f.name);
+				strcat(fullpath, ".");
+				strcat(fullpath, f.extension);
+	
+				remove_file(fullpath);
+
+				// deleta estrutura da lista de arquivos do cliente
+				delete_file_from_client_list(&self, fname);
+			}
 			else
 				break;
 		}
@@ -162,8 +192,8 @@ void* sync_client(void *socket_sync)
 
 				if(index >= 0)		// arquivo existe no cliente
 				{
-					//verifica se o arquivo no servidor tem commit_created/modified > state do cliente.
-					if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
+					//verifica se o arquivo no servidor é mais atual que o arquivo no cliente.
+					if(server_mirror.fileinfo[i].commit_modified > self.fileinfo[index].commit_modified)
 					{
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
@@ -201,7 +231,18 @@ void* sync_client(void *socket_sync)
 				else				// arquivo não existe no cliente
 				{
 					// verifica se o arquivo no servidor tem um commit_modified > state do cliente
-					if(server_mirror.fileinfo[i].commit_modified > self.current_commit)
+					if(self.current_commit == (server_mirror.current_commit - 1))
+					{
+						// o arquivo é velho e deve ser deletado do servidor adequadamente.
+						bzero(buffer, BUFFER_SIZE);
+						buffer[0] = DELETE;
+						write(socketfd, buffer, BUFFER_SIZE);
+
+						bzero(buffer,BUFFER_SIZE);
+						memcpy(buffer, server_mirror.fileinfo[i].name, MAXNAME);
+						write(socketfd, buffer, BUFFER_SIZE);
+					}
+					else
 					{
 						//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 						// pede para o servidor mandar o arquivo
@@ -235,29 +276,22 @@ void* sync_client(void *socket_sync)
 						//bota f na estrutura self
 						insert_file_into_client_list(&self, f);
 					}
-					else
-					{
-						// o arquivo é velho e deve ser deletado do servidor adequadamente.
-						bzero(buffer, BUFFER_SIZE);
-						buffer[0] = DELETE;
-						write(socketfd, buffer, BUFFER_SIZE);
-
-						bzero(buffer,BUFFER_SIZE);
-						memcpy(buffer, server_mirror.fileinfo[i].name, MAXNAME);
-						write(socketfd, buffer, BUFFER_SIZE);
-					}
 				}
 		    }
 		}
+		
+		printf("saí do for\n");
 
 		// avisa que acabou o seu sync.
 		bzero(buffer, BUFFER_SIZE);
 		buffer[0] = SYNC_END;
 		write(socketfd, buffer, BUFFER_SIZE);
 
+		printf("self cc: %d, mirror cc: %d\n", self.current_commit, server_mirror.current_commit);
 		//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
-		if(self.current_commit < server_mirror.current_commit)
-			self.current_commit = server_mirror.current_commit + 1;
+		if(self.current_commit < (server_mirror.current_commit - 1)) {
+			printf("oi\n");
+			self.current_commit = server_mirror.current_commit; }
 		else
 			self.current_commit += 1;
 
@@ -279,12 +313,14 @@ int main(int argc, char *argv[])
 
 	printf("1\n");
 
-	strcat(home,"/home/grad/");
+	strcat(home,"/home/");
 	strcat(home, getlogin());
 
 	printf("%s\n", home);
 	
 	printf("2\n");
+
+	printf("mutex %d\n", sizeof(pthread_mutex_t));
 	
 	init_client(&self, home, argv[1]);
 	

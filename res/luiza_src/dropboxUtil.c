@@ -95,15 +95,12 @@ void update_client(client *client, char *home)
 
 				if(index >= 0) // arquivo já existe na estrutura
 				{
-					printf("update na estrutura\n");
 					file_info f = client->fileinfo[index];
 				
 					// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
 					if(file_more_recent_than(fi, f)) 
 					{
-						printf("updated file\n");
 						memcpy(&client->fileinfo[index], &fi, sizeof(file_info));
-						printf("fileinfo: %s %s %d\n", client->fileinfo[index].name, client->fileinfo[index].extension, client->fileinfo[index].commit_modified);
 					}
 				}
 				else
@@ -141,7 +138,6 @@ void insert_file_into_client_list(client *client, file_info fileinfo)
 
 	memcpy(&client->fileinfo[i], &fileinfo, sizeof(file_info));
 	//printf("file: %s\n",client->fileinfo[i].name);
-	printf("fileinfo %d: %s %s %d\n", i, client->fileinfo[i].name, client->fileinfo[i].extension, client->fileinfo[i].commit_modified);
 	
 	
 	/*for(i = 0; i < MAXFILES; i++)
@@ -178,8 +174,6 @@ int file_more_recent_than(file_info f1, file_info f2)
 	char f1_lm[256], f2_lm[256];
 	strcpy(f1_lm, f1.last_modified);
 	strcpy(f2_lm, f2.last_modified);
-
-	printf("d1 %s d2 %s\n", f1_lm, f2_lm);
 
 	int f1_day = atoi(strtok(f1_lm, "-"));
 	int f1_month = atoi(strtok(NULL, "-"));
