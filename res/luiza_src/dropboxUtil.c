@@ -40,6 +40,7 @@ void update_client(client *client, char *home)
 {
 	//setup do nome do diretório em que ele precisa procurar.
 	int x;
+	int i = 0;
 
 	char sync_dir[256];
 	strcpy(sync_dir,home);
@@ -53,7 +54,6 @@ void update_client(client *client, char *home)
 	d = opendir(sync_dir);
 	if (d)
 	{
-	  int i = 0;
 	  while ((dir = readdir(d)) != NULL)
 	  {
 			struct file_info fi;
@@ -82,7 +82,7 @@ void update_client(client *client, char *home)
 
 			  	struct stat attrib;
 			  	stat(fullpath, &attrib);
-                strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_mtime)));
+                strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
 			  	//strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
 			  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
 			  	fi.size = (int)attrib.st_size;
@@ -113,6 +113,29 @@ void update_client(client *client, char *home)
 	  }
 	  closedir(d);
 	}
+
+	// loop de deleção de elementos da estrutura fileinfo que não existem mais no diretório
+	for(i = 0; i < MAXFILES; i++)
+	{
+		if(strcmp(client->fileinfo[i].name, "\0") == 0)
+			break;
+		else
+		{
+			char file[256];
+			strcpy(file, sync_dir);
+			strcat(file, "/");
+			strcat(file, client->fileinfo[i].name);
+			strcat(file, ".");
+			strcat(file, client->fileinfo[i].extension);
+
+			//stat: On success, zero is returned.  On error, -1 is returned, and errno is set appropriately.
+			struct stat st;
+			if (stat(file, &st) != 0) {
+			  delete_file_from_client_list(client, client->fileinfo[i].name);
+			}
+		}
+	}
+
 }
 
 int search_files(client *client, char filename[MAXNAME])
@@ -159,7 +182,14 @@ void delete_file_from_client_list(client *client, char filename[MAXNAME])
 {
 	int index = search_files(client, filename);
 	if(index >= 0)
+	{	
+		printf("deleting from client list\n");
 		strcpy(client->fileinfo[index].name,"\0");
+		strcpy(client->fileinfo[index].extension,"\0");
+		strcpy(client->fileinfo[index].last_modified,"\0");
+		client->fileinfo[index].commit_modified = 0;
+		client->fileinfo[index].size = 0;
+	}
 }
 
 // retorna 1 se f1 é mais recente que f2. retorna 0  caso contrário
@@ -298,72 +328,7 @@ void send_file(char *file, int server_socket)
 
 void remove_file(char *filename)
 {
-        unlink(filename);
+	unlink(filename);
 }
-
-
-
-
-/*
-void receive_file(int recv_socket){
-    char buffer[256], file_name[256], char_buffer[1];
-    int error;
-    FILE *fp;
-
-    //receiving file name    
-    bzero(buffer, 256);
-    bzero(file_name, 256);
-    error = read(recv_socket, buffer, 256);
-    if (error < 0){printf("ERROR GETTING FILE NAME"); return;}
-    strncpy(file_name, buffer, strlen(buffer));
-
-    //open file
-    fp = fopen(file_name, "w");
-
-
-    bzero(char_buffer, 1);
-    read(recv_socket, char_buffer, 1);
-    //fputc(char_buffer[0], fp);
-    while(char_buffer[0] != EOF)
-    {
-        fputc(char_buffer[0], fp);
-        bzero(char_buffer, 1);
-        read(recv_socket, char_buffer, 1);
-        
-	}
-    
-}*/
-
-
-
-/*
-void send_file(char *file, int sendto_socket) {
-    char buffer[256], char_buffer, cb[1];
-    int error;
-    FILE *fp;
-
-    //sending file name
-    bzero(buffer, 256);
-    sprintf(buffer, "%s", file);
-    error = write(sendto_socket, buffer, strlen(buffer));
-    if (error < 0) {printf("ERROR writing to socket\n"); return;}
-
-    //abrir arquivo para leitura
-    fp = fopen(file, "r");
-
-    //passar char a char
-    char_buffer =  fgetc(fp);
-    while(char_buffer != EOF)
-    {    
-        bzero(cb, 1);
-        cb[0] = char_buffer;
-        write(sendto_socket, cb, 1);
-        char_buffer =  fgetc(fp);
-    }
-
-    bzero(cb, 1);
-    cb[0] = char_buffer;
-    write(sendto_socket, cb, 1);
-}*/
 
 

@@ -224,8 +224,6 @@ void* run_sync(void *socket_sync)
 	char message;
 
 	while(1) {
-		printf("while do sync\n");
-
 		// aí executa aqui o sync_server.
 		sync_server(socketfd);
 
@@ -242,7 +240,6 @@ void* run_sync(void *socket_sync)
 
 			if(message == SYNC)
 			{
-				printf("message == sync\n");
 				char client_id[MAXNAME];
 				//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
 				//pegar os dados do buffer
@@ -250,8 +247,6 @@ void* run_sync(void *socket_sync)
 				read(socketfd, buffer, BUFFER_SIZE);
 				memcpy(client_id, buffer, MAXNAME);
 
-				printf("buff: %s\n", buffer);
-				
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli = malloc(sizeof(client));
 				int cliindex = return_client(client_id, cli); 
@@ -259,27 +254,19 @@ void* run_sync(void *socket_sync)
 				update_client(&(connected_clients[cliindex]), home);
 				client c = connected_clients[cliindex];
 			
-				printf("got client! %s\n", c.userid);
-
 				bzero(buffer,BUFFER_SIZE);
 				memcpy(buffer, &c, sizeof(client));
 				write(socketfd, buffer, BUFFER_SIZE);
 
-				printf("ok\n");
-
 				// agora fica em um while !finished, fica recebendo comandos de download/delete
 				while(1)
 				{	
-					printf("while dos arquivos\n");
-					
 					char command;
 					char fname[MAXNAME];
 
 					bzero(buffer,BUFFER_SIZE);
 					read(socketfd, buffer, BUFFER_SIZE);
 					command = buffer[0];
-
-					printf("command: %c\n", command);
 
 					if(command == DOWNLOAD)
 					{
@@ -347,8 +334,6 @@ void* run_sync(void *socket_sync)
 					else
 						break;
 				}
-				
-				printf("saí do while\n");
 			}
 		}
 	}
@@ -357,7 +342,7 @@ void* run_sync(void *socket_sync)
 void sync_server(int socketfd)
 {
 
-	printf("entrei no sync_server\n");
+	printf("syncing server...\n");
 	struct client client_mirror;
 	char buffer[BUFFER_SIZE];
 
@@ -373,13 +358,14 @@ void sync_server(int socketfd)
 	update_client(&(connected_clients[cliindex]), home);
 	client c = connected_clients[cliindex];
 
+	printf("serv cc: %d x cli cc: %d\n", connected_clients[cliindex].current_commit, client_mirror.current_commit);
+
   	// pra cada arquivo do cliente:
   	int i;
   	for(i = 0; i < MAXFILES; i++) 
     {
       	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
 		{
-			printf("break\n");
            break;
 		}
     	else
@@ -389,10 +375,11 @@ void sync_server(int socketfd)
 			
 			if(index >= 0)		// arquivo existe no servidor
 			{
-				printf("arquivo existe no server\n");
+				printf("found client file in server's directory.\n");
 				//verifica se o arquivo no cliente é mais atual que o arquivo no servidor.
 				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].fileinfo[index].commit_modified)
 				{
+					printf("file in client is more recent than the one in server's dir\n");
 					//isso quer dizer que o arquivo no cliente é mais atual que o arquivo deste cliente no servidor. deve ser baixado, portanto.
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
@@ -402,6 +389,8 @@ void sync_server(int socketfd)
 					bzero(buffer,BUFFER_SIZE);
 					memcpy(buffer, &client_mirror.fileinfo[i].name, MAXNAME);
 					write(socketfd, buffer, BUFFER_SIZE);
+
+					printf("downloading file %s\n", client_mirror.fileinfo[i].name);
 		
 					struct file_info f;
 					//fica esperando receber struct
@@ -428,10 +417,11 @@ void sync_server(int socketfd)
 			}
 			else				// arquivo não existe no servidor
 			{
-				printf("arquivo não tem no servidor\n");
+				printf("client file doesn't exist in server's dir\n");
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
 				if(client_mirror.current_commit == connected_clients[cliindex].current_commit)
 				{
+					printf("new file. downloading...\n");
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
@@ -495,7 +485,8 @@ void sync_server(int socketfd)
 int main(int argc, char *argv[])
 {
     int i;
-	strcpy(home,"/home/");
+	//strcpy(home,"/home/");	//home
+	strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
