@@ -7,14 +7,14 @@
 //#include "fila2.h"
 
 pthread_mutex_t queue;
-//FILA2 connected_clients;
-client connected_clients[256];
+int clients;
+client connected_clients[MAXCLIENTS];
 char home[256];
 
 void list_files(file_info files[256]){
     int i;
     char filename[256];      
-    for(i=0;i<256;i++){
+    for(i=0;i<MAXFILES;i++){
         if (strcmp(files[i].name,"") == 0)
             break;
         else{
@@ -34,7 +34,7 @@ int return_client(char* user_name, client *new_client){
     int i;	
     pthread_mutex_lock(&queue);
 
-    for(i=0;i<256;i++){
+    for(i=0;i<MAXCLIENTS;i++){
         if(connected_clients[i].logged_in == 1){
             if(strcmp(user_name, connected_clients[i].userid) == 0){
                 pthread_mutex_unlock(&queue);
@@ -54,7 +54,7 @@ void disconnect_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
 
 	
-	for(i=0;i<256;i++){
+	for(i=0;i<MAXCLIENTS;i++){
         if(connected_clients[i].logged_in == 1){
             if(strcmp(clientinfo->userid, connected_clients[i].userid) == 0){
                 break;
@@ -69,6 +69,8 @@ void disconnect_client(client *clientinfo){
 		connected_clients[i].logged_in = 0;
 		
 	pthread_mutex_unlock(&queue);
+
+	clients -= 1;
 }
 
 
@@ -77,7 +79,7 @@ int insert_client(client *clientinfo){
 	pthread_mutex_lock(&queue);
     int i;
 
-    for(i=0;i<256;i++){
+    for(i=0;i<MAXCLIENTS;i++){
         if(connected_clients[i].logged_in == 1)
 		{
             if(strcmp(clientinfo->userid, connected_clients[i].userid) == 0)
@@ -136,6 +138,7 @@ void* run_client(void *conn_info)
 		bzero(buffer, BUFFER_SIZE);
 		buffer[0] = 'A';		
 		write(socketfd, buffer, BUFFER_SIZE);
+		clients += 1;
 	}
 	else
 	{
@@ -147,14 +150,12 @@ void* run_client(void *conn_info)
 		pthread_exit(0);
 	}
 
-	printf("EEEEEEEEE\n");
-	
 	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
 	int socket_connection, socket_sync;
 	socklen_t sync_len;
 	struct sockaddr_in serv_addr, sync_addr;
 
-	int PORT = ci.port+1;
+	int PORT = ci.port+clients;
 	
 	if ((socket_connection = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
         printf("ERROR opening sync socket");
@@ -211,8 +212,6 @@ void* run_client(void *conn_info)
 		}
 	}
 
-	//free(socket_sync);
-
 	close(socketfd);
 }
 
@@ -222,6 +221,8 @@ void* run_sync(void *socket_sync)
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 	char message;
+
+	int cliindex;
 
 	while(1) {
 		// aí executa aqui o sync_server.
@@ -249,7 +250,7 @@ void* run_sync(void *socket_sync)
 
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli = malloc(sizeof(client));
-				int cliindex = return_client(client_id, cli); 
+				cliindex = return_client(client_id, cli); 
 
 				update_client(&(connected_clients[cliindex]), home);
 				client c = connected_clients[cliindex];
@@ -336,6 +337,7 @@ void* run_sync(void *socket_sync)
 				}
 			}
 		}
+		pthread_mutex_unlock(&connected_clients[cliindex].mutex);
 	}
 }
 
@@ -353,7 +355,9 @@ void sync_server(int socketfd)
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli = malloc(sizeof(client));
-	int cliindex = return_client(client_mirror.userid, cli); 
+	int cliindex = return_client(client_mirror.userid, cli);
+
+	pthread_mutex_lock(&connected_clients[cliindex].mutex); 
 
 	update_client(&(connected_clients[cliindex]), home);
 	client c = connected_clients[cliindex];
@@ -484,9 +488,10 @@ void sync_server(int socketfd)
 
 int main(int argc, char *argv[])
 {
+	clients = 0;
     int i;
-	//strcpy(home,"/home/");	//home
-	strcpy(home,"/home/grad/");	//ufrgs
+	strcpy(home,"/home/");	//home
+	//strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
@@ -495,7 +500,7 @@ int main(int argc, char *argv[])
 		  mkdir(home, 0777);
 	}
 		
-	for(i=0;i<256;i++){
+	for(i=0;i<MAXCLIENTS;i++){
         connected_clients[i].logged_in = 0;
     }   
 

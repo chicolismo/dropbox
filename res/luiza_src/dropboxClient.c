@@ -6,17 +6,6 @@
 client self;
 char home[256];
 
-/*
-	TODO:
-		- NA MAIN
-			- criar o loop de pegar o input do usuário e executar o comando
-			- ver como fica o comando list
-
-		DEPOIS QUE ARRUMAR ISSO TUDO:
-		- ver os mutex!
-
-*/
-
 int connect_server(char *host, int port)
 {
 	int socketfd;
@@ -46,8 +35,6 @@ int connect_server(char *host, int port)
 //VIROU A FUNÇÃO DA THREAD SEPARADA DO DAEMON
 void* sync_client(void *socket_sync)
 {
-	printf("criei thread de sync!\n");
-
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 
@@ -309,8 +296,8 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	//strcpy(home,"/home/"); //home
-	strcpy(home,"/home/grad/");	//ufrgs
+	strcpy(home,"/home/"); //home
+	//strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
 
 	init_client(&self, home, argv[1]);
