@@ -183,7 +183,6 @@ void delete_file_from_client_list(client *client, char filename[MAXNAME])
 	int index = search_files(client, filename);
 	if(index >= 0)
 	{	
-		printf("deleting from client list\n");
 		strcpy(client->fileinfo[index].name,"\0");
 		strcpy(client->fileinfo[index].extension,"\0");
 		strcpy(client->fileinfo[index].last_modified,"\0");

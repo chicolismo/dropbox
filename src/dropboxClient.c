@@ -39,16 +39,12 @@ void* sync_client(void *socket_sync)
 	int socketfd = *(int*)socket_sync;
 
 	// executa primeiro o sync server para não haver problemas
-
 	while(1)
 	{
-		printf("syncing...\n");
 		// faz isso a cada x segundos:
 		sleep(SLEEP);
 		
 		// AQUI ETAPA DO SYNC_SERVER!
-		printf("syncing server...\n");
-
 		update_client(&self, home);
 
 		// envia seu mirror pro servidor
@@ -56,16 +52,12 @@ void* sync_client(void *socket_sync)
 		memcpy(buffer, &self, sizeof(struct client));
 		write(socketfd, buffer, BUFFER_SIZE);
 
-		printf("sent struct self\n");
-
 		while(1)
 		{
-			printf("receiving commands from server...\n");
-			bzero(buffer,BUFFER_SIZE);
-
 			char command;
 			char fname[MAXNAME];
 
+			bzero(buffer,BUFFER_SIZE);
 			read(socketfd, buffer, BUFFER_SIZE);
 			memcpy(&command, buffer, 1);
 
@@ -81,8 +73,6 @@ void* sync_client(void *socket_sync)
 				file_info f;
 				if(index >= 0)
 					f = self.fileinfo[index];
-
-				printf("sending file %s\n", f.name);
 
 				// manda struct
 				bzero(buffer,BUFFER_SIZE);
@@ -116,8 +106,6 @@ void* sync_client(void *socket_sync)
 				if(index >= 0)
 					f = self.fileinfo[index];
 
-				printf("deleting file %s ...\n", f.name);
-
 				// deleta arquivo da pasta sync do server
 				char fullpath[256];
 				strcpy(fullpath, home);
@@ -139,8 +127,6 @@ void* sync_client(void *socket_sync)
 
 		// AGORA FAZ SYNC_CLIENT
 
-		printf("syncing client...\n");
-
 		struct client server_mirror;
 		struct file_info *fi;
 	
@@ -161,8 +147,6 @@ void* sync_client(void *socket_sync)
 		read(socketfd, buffer, BUFFER_SIZE);
 		memcpy(&server_mirror, buffer, sizeof(struct client));
 
-		printf("cli cc: %d x serv cc: %d\n", self.current_commit, server_mirror.current_commit);
-	  
 	  	// pra cada arquivo do servidor:
 	  	int i;
 	  	for(i = 0; i < MAXFILES; i++) 
@@ -176,11 +160,9 @@ void* sync_client(void *socket_sync)
 
 				if(index >= 0)		// arquivo existe no cliente
 				{
-					printf("found server file in client dir.\n");
 					//verifica se o arquivo no servidor é mais atual que o arquivo no cliente.
 					if(server_mirror.fileinfo[i].commit_modified > self.fileinfo[index].commit_modified)
 					{
-						printf("file in server is more recent than the one in client's dir.\n");
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
 						bzero(buffer, BUFFER_SIZE);
@@ -216,10 +198,8 @@ void* sync_client(void *socket_sync)
 				}
 				else				// arquivo não existe no cliente
 				{
-					printf("did not find file in client's dir.\n");
 					if(self.current_commit == (server_mirror.current_commit - 1))
 					{
-						printf("old file. deleting from server...\n");
 						// o arquivo é velho e deve ser deletado do servidor adequadamente.
 						bzero(buffer, BUFFER_SIZE);
 						buffer[0] = DELETE;
@@ -231,7 +211,6 @@ void* sync_client(void *socket_sync)
 					}
 					else
 					{
-						printf("new file. downloading from server...\n");
 						//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 						// pede para o servidor mandar o arquivo
 						bzero(buffer, BUFFER_SIZE);
@@ -274,12 +253,10 @@ void* sync_client(void *socket_sync)
 		write(socketfd, buffer, BUFFER_SIZE);
 
 		//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
-		if(self.current_commit < (server_mirror.current_commit - 1)) {
-			printf("oi\n");
-			self.current_commit = server_mirror.current_commit; }
+		if(self.current_commit < (server_mirror.current_commit - 1)) 
+			self.current_commit = server_mirror.current_commit; 
 		else
 			self.current_commit += 1;
-
 	}
 }
 
@@ -313,19 +290,23 @@ int main(int argc, char *argv[])
 	// recebe um ok do servidor para continuar a conexão
 	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
-	printf("%s\n",buffer);
 
 	if(buffer[0] == 'A')
 		printf("Connected. :)\n");
 	else
 	{
-		printf("Connected in more than 2 devices.");
+		printf("Connected in more than 2 devices. Disconnecting...");
 		close(socketfd);
 		exit(1);
 	}
 
+	// recebe quantos clientes estão conectados para saber em que +x porta deve conectar
+	bzero(buffer, BUFFER_SIZE);
+	read(socketfd, buffer, BUFFER_SIZE);
+	int clients = buffer[0];
+
 	// conecta um novo socket na porta +1 para fazer o sync apenas sem bloquear o programa de comandos.
-	sync_socketfd = connect_server(argv[2], atoi(argv[3])+1);
+	sync_socketfd = connect_server(argv[2], atoi(argv[3])+clients);
 
 	// dispara nova thread pra fazer o sync_client
 
@@ -370,6 +351,9 @@ int main(int argc, char *argv[])
 			bzero(buffer, BUFFER_SIZE);
 			buffer[0] = EXIT;
 			write(socketfd, buffer, BUFFER_SIZE);
+			
+			close(socketfd);
+			exit(0);
 		}
 		else if(strcmp(command, "upload") == 0)
 		{
@@ -377,7 +361,14 @@ int main(int argc, char *argv[])
 			buffer[0] = UPLOAD;
 			write(socketfd, buffer, BUFFER_SIZE);
 
+			bzero(buffer, BUFFER_SIZE);
+			memcpy(buffer, filepath, BUFFER_SIZE);
+			write(socketfd, buffer, BUFFER_SIZE);
+
 			// envia o arquivo;
+			send_file(filepath, socketfd);
+
+			printf("File uploaded.\n");
 		}
 		else if(strcmp(command, "download") == 0)
 		{
@@ -386,11 +377,39 @@ int main(int argc, char *argv[])
 			write(socketfd, buffer, BUFFER_SIZE);
 
 			// enviar o nome do arquivo
+			// separar com strtok a extensão do arquivo
+
+			char copy[256];
+			strcpy(copy, filepath);
+
+			char *name = strtok(copy, ".");
+
 			bzero(buffer, BUFFER_SIZE);
-			memcpy(buffer, filepath, MAXNAME);
+			memcpy(buffer, name, MAXNAME);
 			write(socketfd, buffer, BUFFER_SIZE);
 
-			// espera o arquivo
+			// espera mensagem de ok do servidor:
+			bzero(buffer, BUFFER_SIZE);
+			read(socketfd, buffer, BUFFER_SIZE);
+
+			if(buffer[0] == FILE_FOUND)
+			{
+				// pega o diretório Downloads do usuário e baixa para lá.
+				char user_downloads_dir[256];
+				strcpy(user_downloads_dir, "/home/");
+				strcat(user_downloads_dir, getlogin());
+				strcat(user_downloads_dir, "/Downloads/");
+				strcat(user_downloads_dir, filepath);			
+
+				// espera o arquivo
+				receive_file(user_downloads_dir, socketfd);
+
+				printf("Downloaded file to /Downloads.\n");
+			}
+			else
+			{
+				printf("The file you asked for doesn't exit. Please try again.\n");
+			}
 		}
 	}
 

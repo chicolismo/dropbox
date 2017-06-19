@@ -26,6 +26,9 @@
 #define SYNC_END 'q'
 #define UPLOAD 'u'
 
+#define FILE_NOT_FOUND 'k'
+#define FILE_FOUND 'y'
+
 //connection flags
 #define NOT_VALID 0
 #define ACCEPTED 1
