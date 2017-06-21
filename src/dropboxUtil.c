@@ -1,11 +1,12 @@
-//#include "../include/dropboxUtil.h"
-#include "dropboxUtil.h"
+#include "../include/dropboxUtil.h"
+//#include "dropboxUtil.h"
 
 void init_client(client *client, char *home, char *login)
 {
 	//inicializa estrutura self do cliente
 	strcpy(client->userid, login);
-
+	
+	printf("client login %s\n", client->userid);
 	//inicializa todos os nomes de arquivo como empty string, preparando para a função update client
 	int i;
 	for(i = 0; i < MAXFILES; i++)
@@ -17,6 +18,7 @@ void init_client(client *client, char *home, char *login)
 	strcat(sync_dir, "/sync_dir_");
 	strcat(sync_dir, login);
 
+	printf("syncdir: %s\n", sync_dir);
 
 	struct stat st;
 	if (stat(sync_dir, &st) != 0) {
@@ -70,6 +72,9 @@ void update_client(client *client, char *home)
 		
 			  	strcpy(fi.name, name);
 			  	strcpy(fi.extension, extension);
+
+				printf("NOME DO ARQUIVO: %s\n", fi.name);
+				printf("EXTENSÃO DO ARQUIVO: %s\n", fi.extension);
 
 			  	// pegar ultima data de modificação do arquivo
 				//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
@@ -259,10 +264,6 @@ int file_more_recent_than(file_info f1, file_info f2)
 	}
 }
 
-
-
-
-
 void receive_file(char* file_name, int client_socket)
 {
     char buffer[256], char_buffer[1];
@@ -282,12 +283,14 @@ void receive_file(char* file_name, int client_socket)
 
     bzero(char_buffer, 1);
     read(client_socket, char_buffer, 1);
+	printf("%c\n", char_buffer[0]);
     //fputc(char_buffer[0], fp);
-    while(char_buffer[0] != EOF)
+    while(char_buffer[0] != 25)
     {
-        fputc(char_buffer[0], fp);
+        fprintf (fp, "%c", char_buffer[0]);
         bzero(char_buffer, 1);
         read(client_socket, char_buffer, 1);
+		printf("%d\n", char_buffer[0]);
         
 	}
 
@@ -295,35 +298,31 @@ void receive_file(char* file_name, int client_socket)
     
 }
 
-
-void send_file(char *file, int server_socket) 
+void send_file(char *file, int server_socket)
 {
-    char buffer[256], char_buffer, cb[1];
-    int error;
-    FILE *fp;
+	char string[2], buffer[1];
+	FILE *fp;
 
-    //printf("%s", file);
-    //abrir arquivo para leitura
-    fp = fopen(file, "r");
+	//abrir arquivo para leitura
+	fp = fopen(file, "rb");
 
-    //passar char a char
-    char_buffer =  fgetc(fp);
-    while(char_buffer != EOF)
-    {    
-        bzero(cb, 1);
-        cb[0] = char_buffer;
-        write(server_socket, cb, 1);
-        char_buffer =  fgetc(fp);
-    }
+	if(fp == NULL)
+		perror("error\n");
 
-    bzero(cb, 1);
-    cb[0] = char_buffer;
-    write(server_socket, cb, 1);
-    fclose(fp);
+	while(fgets(string, 2, fp))
+	{
+		bzero(buffer, 1);
+		buffer[0] = string[0];
+		printf("%c", buffer[0]);
+		write(server_socket, buffer, 1);
+	}
+	
+	bzero(buffer, 1);
+	buffer[0] = 25;
+	write(server_socket, buffer, 1);
+
+	fclose(fp);
 }
-
-
-
 
 void remove_file(char *filename)
 {

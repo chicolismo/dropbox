@@ -1,8 +1,8 @@
-//#include "../include/dropboxServer.h"
-//#include "../include/dropboxClient.h"
+#include "../include/dropboxServer.h"
+#include "../include/dropboxUtil.h"
 
-#include "dropboxServer.h"
-#include "dropboxUtil.h"
+//#include "dropboxServer.h"
+//#include "dropboxUtil.h"
 //#include "../../include/fila2.h"
 //#include "fila2.h"
 
@@ -11,18 +11,20 @@ int clients;
 client connected_clients[MAXCLIENTS];
 char home[256];
 
-void list_files(file_info files[256]){
+void list_files(client *client, char *buffer){
     int i;
-    char filename[256];      
-    for(i=0;i<MAXFILES;i++){
-        if (strcmp(files[i].name,"") == 0)
+	
+	strcpy(buffer, "files:\n");     
+    for(i = 0; i < MAXFILES; i++)
+	{
+        if (strcmp(client->fileinfo[i].name,"\0") == 0)
             break;
-        else{
-            strcpy(filename, "");
-            strcat(filename, files[i].name);
-            strcat(filename, files[i].extension);
-
-            printf("%s", filename);
+        else
+		{
+            strcat(buffer, client->fileinfo[i].name);
+			strcat(buffer, ".");
+            strcat(buffer, client->fileinfo[i].extension);
+			strcat(buffer, "\n");
         }
     }
 }
@@ -109,79 +111,22 @@ void* run_client(void *conn_info)
 {
 	char buffer[BUFFER_SIZE];
 	char message;
-	connection_info ci = *(connection_info*)conn_info;
-	int socketfd = ci.socket_client;
+	//connection_info ci = *(connection_info*)conn_info;
+	int socketfd = *(int *)conn_info; //ci.socket_client;
 
-	// VAI RECEBER O ID DO CLIENTE ANTES DE CRIAR O SYNC
-	// AQUI ELE TEM QUE ACEITAR O CLIENTE E ENVIAR MENSAGEM DE OK
 	char clientid[MAXNAME];
+
+	printf("running client\n");
 
 	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, BUFFER_SIZE);
 	memcpy(clientid, buffer, MAXNAME);
 
 	client *cli = malloc(sizeof(client));
-	init_client(cli, home, clientid);
-	
-	if(insert_client(cli) == ACCEPTED)
-	{
-		bzero(buffer, BUFFER_SIZE);
-		buffer[0] = 'A';		
-		write(socketfd, buffer, BUFFER_SIZE);
-		clients += 1;
-	}
-	else
-	{
-		bzero(buffer, BUFFER_SIZE);
-		buffer[0] = 'N';
-		write(socketfd, buffer, BUFFER_SIZE);
-		
-		close(socketfd);
-		pthread_exit(0);
-	}
-
-	// envia quantos clientes estão conectados para o cliente saber em que +x porta deve conectar o sync
-	bzero(buffer, BUFFER_SIZE);
-	buffer[0] = clients;
-	write(socketfd, buffer, BUFFER_SIZE);
-	
-	// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
-	int socket_connection, socket_sync;
-	socklen_t sync_len;
-	struct sockaddr_in serv_addr, sync_addr;
-
-	int PORT = ci.port+clients;
-	
-	if ((socket_connection = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
-        printf("ERROR opening sync socket");
-	
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
-	bzero(&(serv_addr.sin_zero), 8);     
-    
-	if (bind(socket_connection, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
-		printf("ERROR on binding sync");
-	
-	listen(socket_connection, 1);
-	sync_len = sizeof(struct sockaddr_in);
-	
-	if( (socket_sync = accept(socket_connection, (struct sockaddr *) &sync_addr, &sync_len)) )
-	{
-		int *new_sock;
-		new_sock = malloc(1);
-       	*new_sock = socket_sync;
-		pthread_t sync_thread;
-		pthread_create(&sync_thread, NULL, run_sync, (void*)new_sock);
-		pthread_detach(sync_thread);
-
-	}
-	
-	// terminou de criar a thread de sync. agora pode executar o loop normal.
  
 	while(1) {
 		bzero(buffer, BUFFER_SIZE);
-		message = read(socketfd, buffer, BUFFER_SIZE);
+		message = read(socketfd, buffer, 1);
 		if (message < 0) 
 			printf("ERROR reading from socket");
 		else {
@@ -198,7 +143,7 @@ void* run_client(void *conn_info)
 				case DOWNLOAD:
 					{
 						bzero(buffer, BUFFER_SIZE);
-						read(socketfd, buffer, BUFFER_SIZE);
+						read(socketfd, buffer, MAXNAME);
 
 						int client_index = return_client(clientid, cli);						
 
@@ -209,7 +154,7 @@ void* run_client(void *conn_info)
 							// manda mensagem de arquivo existente.
 							bzero(buffer, BUFFER_SIZE);
 							buffer[0] = FILE_FOUND;
-							write(socketfd, buffer, BUFFER_SIZE);
+							write(socketfd, buffer, 1);
 
 							// prepara o caminho do diretório sync para enviar o arquivo
 							char fullpath[MAXNAME];
@@ -221,7 +166,8 @@ void* run_client(void *conn_info)
 							strcat(fullpath, ".");
 							strcat(fullpath, connected_clients[client_index].fileinfo[index].extension);
 
-							// manda arquivo				
+							// manda arquivo	
+							printf("Enviando %s...\n", fullpath);			
 							send_file(fullpath, socketfd);
 						}
 						else
@@ -229,22 +175,20 @@ void* run_client(void *conn_info)
 							// manda mensagem de arquivo inexistente.
 							bzero(buffer, BUFFER_SIZE);
 							buffer[0] = FILE_NOT_FOUND;
-							write(socketfd, buffer, BUFFER_SIZE);
+							write(socketfd, buffer, 1);
 						}
 					}
 					break;
 				case UPLOAD:
 					{
 						bzero(buffer, BUFFER_SIZE);
-						read(socketfd, buffer, BUFFER_SIZE);
+						read(socketfd, buffer, MAXNAME);
 
 						// pegar o último elemento
 						char file[256];
 						strcpy(file, buffer);
-						printf("%s\n", file);
 						
 						char *filename = strrchr(file, '/');
-						printf("%s\n", filename);
 
 						// pegar path de destino do servidor
 						int client_index = return_client(clientid, cli);
@@ -255,16 +199,18 @@ void* run_client(void *conn_info)
 						strcat(fullpath, connected_clients[client_index].userid);
 						strcat(fullpath, filename);
 
-						printf("%s\n", fullpath);
-						
 						receive_file(fullpath, socketfd);
 					}					
 					break;
-				/*case LIST:
+				case LIST:
 					{
-
+						int client_index = return_client(clientid, cli);
+						
+						bzero(buffer, BUFFER_SIZE);
+						list_files(&(connected_clients[client_index]), buffer);
+						write(socketfd, buffer, BUFFER_SIZE);
 					}
-					break;*/
+					break;
 				default:
 					break;
 			}
@@ -282,6 +228,8 @@ void* run_sync(void *socket_sync)
 
 	int cliindex;
 
+	printf("criei thread\n");
+
 	while(1) {
 		// aí executa aqui o sync_server.
 		sync_server(socketfd);
@@ -289,7 +237,9 @@ void* run_sync(void *socket_sync)
 		// aí aqui executa o loop de aceite do sync_client
 
 		bzero(buffer, BUFFER_SIZE);
-		message = read(socketfd, buffer, BUFFER_SIZE);
+		message = read(socketfd, buffer, 1);
+
+		printf("message %s\n", buffer);
 
 		if (message < 0) 
 			printf("ERROR reading from socket");
@@ -303,7 +253,7 @@ void* run_sync(void *socket_sync)
 				//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
 				//pegar os dados do buffer
 				bzero(buffer, BUFFER_SIZE);
-				read(socketfd, buffer, BUFFER_SIZE);
+				read(socketfd, buffer, MAXNAME);
 				memcpy(client_id, buffer, MAXNAME);
 
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
@@ -313,9 +263,10 @@ void* run_sync(void *socket_sync)
 				update_client(&(connected_clients[cliindex]), home);
 				client c = connected_clients[cliindex];
 			
+				// AQUI DÁ PROBLEMA
 				bzero(buffer,BUFFER_SIZE);
 				memcpy(buffer, &c, sizeof(client));
-				write(socketfd, buffer, BUFFER_SIZE);
+				write(socketfd, buffer, sizeof(client));
 
 				// agora fica em um while !finished, fica recebendo comandos de download/delete
 				while(1)
@@ -324,27 +275,31 @@ void* run_sync(void *socket_sync)
 					char fname[MAXNAME];
 
 					bzero(buffer,BUFFER_SIZE);
-					read(socketfd, buffer, BUFFER_SIZE);
+					read(socketfd, buffer, 1);
 					command = buffer[0];
 
 					if(command == DOWNLOAD)
 					{
+						printf("Fazendo download");
+
 						// recebe nome do arquivo
 						bzero(buffer,BUFFER_SIZE);
-						read(socketfd, buffer, BUFFER_SIZE);
+						read(socketfd, buffer, MAXNAME);
 						memcpy(fname, buffer, MAXNAME);
+						printf(" do arquivo %s\n", fname);
 						
 						// procura arquivo
 						int index = search_files(&(connected_clients[cliindex]), fname);
-						file_info f;
+						struct file_info f;
 
 						if(index >= 0)
-							f = connected_clients[cliindex].fileinfo[index];
+							memcpy(&f, &(connected_clients[cliindex].fileinfo[index]), sizeof(struct file_info));
+						printf("file_info name para enviar: %s\n", f.name);
 
-						// manda struct
+						// manda struct	
 						bzero(buffer,BUFFER_SIZE);
-						memcpy(buffer, &f, sizeof(file_info));
-						write(socketfd, buffer, BUFFER_SIZE);
+						memcpy(buffer, &f, sizeof(struct file_info));
+						write(socketfd, buffer, sizeof(struct file_info));
 
 						// receive file funciona com full path
 						char fullpath[MAXNAME];
@@ -356,6 +311,8 @@ void* run_sync(void *socket_sync)
 						strcat(fullpath, ".");
 						strcat(fullpath, f.extension);
 
+						printf("Fullpath a ser enviado: %s\n", fullpath);
+
 						// manda arquivo				
 						send_file(fullpath, socketfd);
 					}
@@ -364,7 +321,7 @@ void* run_sync(void *socket_sync)
 						bzero(buffer,BUFFER_SIZE);
 
 						// recebe nome do arquivo
-						read(socketfd, buffer, BUFFER_SIZE);
+						read(socketfd, buffer, MAXNAME);
 						memcpy(fname, buffer, MAXNAME);
 
 						// procura arquivo
@@ -404,9 +361,15 @@ void sync_server(int socketfd)
 	char buffer[BUFFER_SIZE];
 
 	//server fica esperando o cliente enviar seu mirror
+	// AQUI DÁ PROBLEMA
+	int n = 0;
 	bzero(buffer,BUFFER_SIZE);
-	read(socketfd, buffer, BUFFER_SIZE);
+	while(n < sizeof(struct client))
+		n += read(socketfd, buffer+n, 1);
 	memcpy(&client_mirror, buffer, sizeof(struct client));
+	
+	printf("oi, quero fazer syn_server\n");
+	printf("client mirror id %s, cc %d, file[0] %s file[1] %s\n", client_mirror.userid, client_mirror.current_commit, client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name);
 
 	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli = malloc(sizeof(client));
@@ -439,17 +402,23 @@ void sync_server(int socketfd)
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
 					buffer[0] = DOWNLOAD;
-					write(socketfd, buffer, BUFFER_SIZE);
+					write(socketfd, buffer, 1);
 
 					bzero(buffer,BUFFER_SIZE);
 					memcpy(buffer, &client_mirror.fileinfo[i].name, MAXNAME);
-					write(socketfd, buffer, BUFFER_SIZE);
+					write(socketfd, buffer, MAXNAME);
 
+					// DA PROBLEMA COM TAMANHO DO BUFFER:
 					struct file_info f;
 					//fica esperando receber struct
 					bzero(buffer,BUFFER_SIZE);
-					read(socketfd, buffer, BUFFER_SIZE);
+					int n = 0;
+					bzero(buffer,BUFFER_SIZE);
+					while(n < sizeof(struct file_info))
+						n += read(socketfd, buffer+n, 1);
 					memcpy(&f, buffer, sizeof(struct file_info));
+
+					printf("f name: %s\n", f.name);
 				
 					// receive file funciona com full path
 					char fullpath[MAXNAME];
@@ -460,6 +429,8 @@ void sync_server(int socketfd)
 					strcat(fullpath, f.name);
 					strcat(fullpath, ".");
 					strcat(fullpath, f.extension);
+
+					printf("fullpath %s\n", fullpath);
 			
 					//recebe arquivo
 					receive_file(fullpath, socketfd);
@@ -477,18 +448,26 @@ void sync_server(int socketfd)
 					// pede para o cliente mandar o arquivo
 					bzero(buffer,BUFFER_SIZE);
 					buffer[0] = DOWNLOAD;
-					write(socketfd, buffer, BUFFER_SIZE);
+					write(socketfd, buffer, 1);
 
 					bzero(buffer,BUFFER_SIZE);
 					memcpy(buffer, client_mirror.fileinfo[i].name, MAXNAME);
-					write(socketfd, buffer, BUFFER_SIZE);
+					write(socketfd, buffer, MAXNAME);
 
 					struct file_info f;
 					//fica esperando receber struct
+					int n = 0;
 					bzero(buffer,BUFFER_SIZE);
-					read(socketfd, buffer, BUFFER_SIZE);
+					while(n < sizeof(struct file_info))
+						n += read(socketfd, buffer+n, 1);
 					memcpy(&f, buffer, sizeof(struct file_info));
-				
+
+					printf("fs name: %s\n", f.name);
+sleep(2);
+					printf("fs name: %s\n", f.extension);
+sleep(2);
+					printf("fs cm: %d\n", f.size);
+		
 					// receive file funciona com full path
 					char fullpath[MAXNAME];
 					strcpy(fullpath, home);
@@ -498,9 +477,12 @@ void sync_server(int socketfd)
 					strcat(fullpath, f.name);
 					strcat(fullpath, ".");
 					strcat(fullpath, f.extension);
-		
+
 					//recebe arquivo
+					printf("Recebendo %s...\n", fullpath);
 					receive_file(fullpath, socketfd);
+			
+					printf("saindo\n");
 
 					//bota f na estrutura self
 					insert_file_into_client_list(&(connected_clients[cliindex]), f);
@@ -511,11 +493,11 @@ void sync_server(int socketfd)
 					// o arquivo é velho e deve ser deletado do servidor adequadamente.
 					bzero(buffer, BUFFER_SIZE);
 					buffer[0] = DELETE;
-					write(socketfd, buffer, BUFFER_SIZE);
+					write(socketfd, buffer, 1);
 
 					bzero(buffer,BUFFER_SIZE);
 					memcpy(buffer, &connected_clients[cliindex].fileinfo[i].name, MAXNAME);
-					write(socketfd, buffer, BUFFER_SIZE);
+					write(socketfd, buffer, MAXNAME);
 				}
 			}
         }
@@ -524,10 +506,12 @@ void sync_server(int socketfd)
 	//avança o estado de commit do cliente no servidor.
 	connected_clients[cliindex].current_commit += 1;
 
+	printf("leaving sync server\n");
+
 	// avisa que acabou o seu sync.
 	bzero(buffer, BUFFER_SIZE);
 	buffer[0] = SYNC_END;
-	write(socketfd, buffer, BUFFER_SIZE);
+	write(socketfd, buffer, 1);
 }
 
 
@@ -535,8 +519,10 @@ int main(int argc, char *argv[])
 {
 	clients = 0;
     int i;
-	strcpy(home,"/home/");	//home
-	//strcpy(home,"/home/grad/");	//ufrgs
+	char buffer[BUFFER_SIZE];
+
+	//strcpy(home,"/home/");	//home
+	strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
@@ -588,18 +574,88 @@ int main(int argc, char *argv[])
 		if( (socket_client = accept(socket_connection, (struct sockaddr *) &client_addr, &client_len)) )
 
 		{
+			char clientid[MAXNAME];
+
+			// cliente me manda id
+			bzero(buffer, BUFFER_SIZE);
+			read(socket_client, buffer, MAXNAME);
+			memcpy(clientid, buffer, MAXNAME);
+
+			printf("client: %s\n", clientid);
+
+			printf("home: %s\n", home);
+			client *cli = malloc(sizeof(client));
+
+			printf("cli %p\n", cli);
+			init_client(cli, home, clientid);
+
+			printf ("AAAAAA\n");
+			if(insert_client(cli) == ACCEPTED)
+			{
+				bzero(buffer, BUFFER_SIZE);
+				//sprintf(buffer, "%s", "A");
+				buffer[0] = 'A';		
+				printf("buffer %s\n", buffer);
+				write(socket_client, buffer, 1);
+				clients += 1;
+			}
+			else
+			{
+				bzero(buffer, BUFFER_SIZE);
+				buffer[0] = 'N';
+				write(socket_client, buffer, 1);
+		
+				close(socket_client);
+				break;
+			}
+
+			printf("buffer: %s\n", buffer);
+
+			// agora cria a outra conexão. 
+			// envia quantos clientes estão conectados para o cliente saber em que +x porta deve conectar o sync
+			bzero(buffer, BUFFER_SIZE);
+			buffer[0] = clients;
+			write(socket_client, buffer, 1);
+			
 			int *new_sock;
 			new_sock = malloc(1);
         	*new_sock = socket_client;
 			pthread_t client_thread;
 
-			connection_info *ci = malloc(sizeof(connection_info));
-			ci->socket_client = socket_client;
-			ci->port = PORT;
-		
-			pthread_create(&client_thread, NULL, run_client, (void*)ci);
+			pthread_create(&client_thread, NULL, run_client, (void*)new_sock);
 		
 			pthread_detach(client_thread);
+
+			// fica esperando a segunda conexão do sync e quando recebe, cria outro socket/thread.
+			int socket_conn, socket_sync;
+			socklen_t sync_len;
+			struct sockaddr_in sync_addr;
+
+			int PORT_SYNC = PORT+clients;
+	
+			if ((socket_conn = socket(AF_INET, SOCK_STREAM, 0)) == -1) 
+				printf("ERROR opening sync socket");
+	
+			serv_addr.sin_family = AF_INET;
+			serv_addr.sin_port = htons(PORT_SYNC);
+			serv_addr.sin_addr.s_addr = INADDR_ANY;
+			bzero(&(serv_addr.sin_zero), 8);     
+		
+			if (bind(socket_conn, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
+				printf("ERROR on binding sync");
+	
+			listen(socket_conn, 1);
+			sync_len = sizeof(struct sockaddr_in);
+	
+			if( (socket_sync = accept(socket_conn, (struct sockaddr *) &sync_addr, &sync_len)) )
+			{
+				int *new_new_sock;
+				new_new_sock = malloc(1);
+			   	*new_new_sock = socket_sync;
+				pthread_t sync_thread;
+				pthread_create(&sync_thread, NULL, run_sync, (void*)new_new_sock);
+				pthread_detach(sync_thread);
+			}
 		}
 	}
 
