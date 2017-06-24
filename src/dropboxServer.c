@@ -121,7 +121,7 @@ void* run_client(void *conn_info)
 	printf("running client\n");
 
 	bzero(buffer, BUFFER_SIZE);
-	read(socketfd, buffer, BUFFER_SIZE);
+	read(socketfd, buffer, MAXNAME);
 	memcpy(clientid, buffer, MAXNAME);
 
 	client *cli = malloc(sizeof(client));
@@ -264,7 +264,9 @@ void* run_sync(void *socket_sync)
 
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli = malloc(sizeof(client));
-				cliindex = return_client(client_id, cli); 
+				cliindex = return_client(client_id, cli);
+
+				printf("cliindex: %d\n", cliindex); 
 
 				printf("client returned is: %s", connected_clients[cliindex].userid);
 
