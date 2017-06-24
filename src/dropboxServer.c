@@ -257,16 +257,19 @@ void* run_sync(void *socket_sync)
 				read(socketfd, buffer, MAXNAME);
 				memcpy(client_id, buffer, MAXNAME);
 
+				printf("sync_client for client %s\n", client_id);
+
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli = malloc(sizeof(client));
 				cliindex = return_client(client_id, cli); 
 
+				printf("client returned is: %s", connected_clients[cliindex].userid);
+
 				update_client(&(connected_clients[cliindex]), home);
-				client c = connected_clients[cliindex];
-			
+	
 				// AQUI DÁ PROBLEMA
 				bzero(buffer,BUFFER_SIZE);
-				memcpy(buffer, &c, sizeof(client));
+				memcpy(buffer, &(connected_clients[cliindex]), sizeof(client));
 				write(socketfd, buffer, sizeof(client));
 
 				// agora fica em um while !finished, fica recebendo comandos de download/delete
