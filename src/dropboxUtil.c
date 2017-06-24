@@ -41,7 +41,6 @@ void init_client(client *client, char *home, char *login)
 void update_client(client *client, char *home)
 {
 	//setup do nome do diretório em que ele precisa procurar.
-	int x;
 	int i = 0;
 
 	char sync_dir[256];
@@ -60,8 +59,7 @@ void update_client(client *client, char *home)
 	  {
 			struct file_info fi;
 			
-			if(strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".") == 0)
-				x=1;
+			if(strcmp(dir->d_name, "..") == 0 || strcmp(dir->d_name, ".") == 0);
 			else
 			{
 				// d_name é o nome do arquivo sem o resto do path. ta de boasssss
@@ -76,43 +74,49 @@ void update_client(client *client, char *home)
 				printf("NOME DO ARQUIVO: %s\n", fi.name);
 				printf("EXTENSÃO DO ARQUIVO: %s\n", fi.extension);
 
-			  	// pegar ultima data de modificação do arquivo
-				//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
-				char fullpath[256];
-				strcpy(fullpath, sync_dir);
-				strcat(fullpath, "/");
-				strcat(fullpath, name);
-				strcat(fullpath, ".");
-				strcat(fullpath, extension);
-
-			  	struct stat attrib;
-			  	stat(fullpath, &attrib);
-                strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
-			  	//strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
-			  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
-			  	fi.size = (int)attrib.st_size;
-
-				//leitura do arquivo está sendo feita neste commit. colocar o commit atual do cliente no arquivo
-
-				fi.commit_modified = client->current_commit;
-
-				int index = search_files(client, name);
-
-				if(index >= 0) // arquivo já existe na estrutura
-				{
-					file_info f;
-					memcpy(&f, &(client->fileinfo[index]), sizeof(file_info));
-				
-					// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
-					if(file_more_recent_than(fi, f)) 
-					{
-						memcpy(&client->fileinfo[index], &fi, sizeof(file_info));
-					}
-				}
+				char *til = strchr(fi.extension, '~');
+				if(til);
 				else
 				{
-					//arquivo não está na estrutura, adicionar.
-					insert_file_into_client_list(client, fi);
+
+				  	// pegar ultima data de modificação do arquivo
+					//STAT É CHAMADO COM FULL PATH, TEM QUE CONCATENAR
+					char fullpath[256];
+					strcpy(fullpath, sync_dir);
+					strcat(fullpath, "/");
+					strcat(fullpath, name);
+					strcat(fullpath, ".");
+					strcat(fullpath, extension);
+
+				  	struct stat attrib;
+				  	stat(fullpath, &attrib);
+		            strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
+				  	//strftime(fi.last_modified, MAXNAME, "%d-%m-%Y-%H-%M-%S", localtime(&(attrib.st_ctime)));
+				  	// strftime(date, 20, "%d-%m-%y", localtime(&(attrib.st_ctime)));
+				  	fi.size = (int)attrib.st_size;
+
+					//leitura do arquivo está sendo feita neste commit. colocar o commit atual do cliente no arquivo
+
+					fi.commit_modified = client->current_commit;
+
+					int index = search_files(client, name);
+
+					if(index >= 0) // arquivo já existe na estrutura
+					{
+						file_info f;
+						memcpy(&f, &(client->fileinfo[index]), sizeof(file_info));
+				
+						// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
+						if(file_more_recent_than(fi, f)) 
+						{
+							memcpy(&client->fileinfo[index], &fi, sizeof(file_info));
+						}
+					}
+					else
+					{
+						//arquivo não está na estrutura, adicionar.
+						insert_file_into_client_list(client, fi);
+					}
 				}
 			}
 		  	i++;

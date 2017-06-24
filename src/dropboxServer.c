@@ -230,7 +230,8 @@ void* run_sync(void *socket_sync)
 
 	printf("criei thread\n");
 
-	while(1) {
+	while(1) 
+	{
 		// aí executa aqui o sync_server.
 		sync_server(socketfd);
 
@@ -345,7 +346,10 @@ void* run_sync(void *socket_sync)
 						delete_file_from_client_list(&(connected_clients[cliindex]), fname);
 					}
 					else
+					{
+						pthread_mutex_unlock(&connected_clients[cliindex].mutex);
 						break;
+					}
 				}
 			}
 		}
@@ -369,7 +373,6 @@ void sync_server(int socketfd)
 	printf("oi, quero fazer syn_server\n");
 	printf("client mirror id %s, cc %d, file[0] %s file[1] %s\n", client_mirror.userid, client_mirror.current_commit, client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name);
 
-	// TODO: função que recupera o cliente com client_mirror->userid da lista de clientes.
 	client *cli = malloc(sizeof(client));
 	int cliindex = return_client(client_mirror.userid, cli);
 
@@ -462,9 +465,7 @@ void sync_server(int socketfd)
 					memcpy(&f, buffer, sizeof(struct file_info));
 
 					printf("fs name: %s\n", f.name);
-sleep(2);
 					printf("fs name: %s\n", f.extension);
-sleep(2);
 					printf("fs cm: %d\n", f.size);
 		
 					// receive file funciona com full path

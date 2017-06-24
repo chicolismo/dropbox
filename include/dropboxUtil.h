@@ -14,7 +14,7 @@
 #define BUFFER_SIZE 16384
 #define MAXNAME 128
 #define MAXFILES 30
-#define SLEEP 10
+#define SLEEP 20
 #define MAXCLIENTS 30
 
 //flags de controle
