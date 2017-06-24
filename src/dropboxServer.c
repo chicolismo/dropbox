@@ -239,6 +239,8 @@ void* run_sync(void *socket_sync)
 
 		// aí aqui executa o loop de aceite do sync_client
 
+		printf("left sync_server, init sync_client\n");
+
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, 1);
 
@@ -247,6 +249,7 @@ void* run_sync(void *socket_sync)
 		else 
 		{
 			message = buffer[0];
+			printf("message %c\n", message);
 
 			if(message == SYNC)
 			{
