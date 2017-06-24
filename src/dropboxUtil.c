@@ -75,7 +75,8 @@ void update_client(client *client, char *home)
 				printf("EXTENSÃO DO ARQUIVO: %s\n", fi.extension);
 
 				char *til = strchr(fi.extension, '~');
-				if(til);
+				int empty_name = strcmp(fi.name, "\0");
+				if(til || empty_name == 0);
 				else
 				{
 
