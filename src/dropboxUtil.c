@@ -34,6 +34,11 @@ void init_client(client *client, char *home, char *login)
         printf("\nMutex (queue) init failed\n");
         return;
     }
+	if (pthread_cond_init(&(client->cond), NULL) != 0)
+    {
+        printf("\nMutex (queue) init failed\n");
+        return;
+    }
 
 	update_client(client, home);
 }

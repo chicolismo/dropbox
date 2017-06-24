@@ -49,6 +49,7 @@ typedef struct client {
 	int logged_in;
 	int current_commit;
     pthread_mutex_t mutex;
+	pthread_cond_t cond;
 } client;
 
 typedef struct connection_info {

@@ -11,6 +11,8 @@ int clients;
 client connected_clients[MAXCLIENTS];
 char home[256];
 
+enum { STATE_DEV1, STATE_DEV2 } state = STATE_DEV1;
+
 void list_files(client *client, char *buffer){
     int i;
 	
@@ -81,7 +83,7 @@ int insert_client(client *clientinfo){
 			{
 				if(connected_clients[i].devices[1] == 0)
 				{
-		            connected_clients[i].devices[1] = 1; //ja esta conectado, ativar segundo device
+		            //connected_clients[i].devices[1] = 1; //ja esta conectado, ativar segundo device
 					pthread_mutex_unlock(&queue);
 		            return ACCEPTED;
 				}
@@ -96,7 +98,7 @@ int insert_client(client *clientinfo){
 		{
 			memcpy(&connected_clients[i], clientinfo, sizeof(client));
 			//connected_clients[i] = *clientinfo;
-			connected_clients[i].devices[0] = 1;
+			//connected_clients[i].devices[0] = 1;
 			pthread_mutex_unlock(&queue);
 			return ACCEPTED;
 		}
@@ -347,13 +349,19 @@ void* run_sync(void *socket_sync)
 					}
 					else
 					{
-						pthread_mutex_unlock(&connected_clients[cliindex].mutex);
+						//pthread_mutex_unlock(&connected_clients[cliindex].mutex);
 						break;
 					}
 				}
 			}
 		}
-		pthread_mutex_unlock(&connected_clients[cliindex].mutex);
+		pthread_mutex_lock(&connected_clients[cliindex].mutex);
+		if(socketfd == connected_clients[cliindex].devices[0])
+        	state = STATE_DEV2;
+		else
+			state = STATE_DEV1;
+        pthread_cond_signal(&connected_clients[cliindex].cond);
+        pthread_mutex_unlock(&connected_clients[cliindex].mutex);
 	}
 }
 
@@ -375,8 +383,22 @@ void sync_server(int socketfd)
 
 	client *cli = malloc(sizeof(client));
 	int cliindex = return_client(client_mirror.userid, cli);
-
-	pthread_mutex_lock(&connected_clients[cliindex].mutex); 
+	
+	//tem que fazer cond wait com relação ao device que está conectado.
+	if(socketfd == connected_clients[cliindex].devices[0])
+	{
+		pthread_mutex_lock(&connected_clients[cliindex].mutex);
+		while(state != STATE_DEV1)
+			pthread_cond_wait(&connected_clients[cliindex].cond, &connected_clients[cliindex].mutex);
+		pthread_mutex_lock(&connected_clients[cliindex].mutex);
+	}
+	else
+	{
+	 	pthread_mutex_lock(&connected_clients[cliindex].mutex);
+		while(state != STATE_DEV2)
+			pthread_cond_wait(&connected_clients[cliindex].cond, &connected_clients[cliindex].mutex);
+		pthread_mutex_lock(&connected_clients[cliindex].mutex);
+	}
 
 	update_client(&(connected_clients[cliindex]), home);
 
@@ -652,6 +674,16 @@ int main(int argc, char *argv[])
 				int *new_new_sock;
 				new_new_sock = malloc(1);
 			   	*new_new_sock = socket_sync;
+
+				// atualiza o devices do cliente com o socketfd usado pra sync
+
+				int in = return_client(clientid, cli);
+
+				if(connected_clients[in].devices[0] == 0)
+					connected_clients[in].devices[0] = socket_sync;
+				else
+					connected_clients[in].devices[1] = socket_sync;
+ 
 				pthread_t sync_thread;
 				pthread_create(&sync_thread, NULL, run_sync, (void*)new_new_sock);
 				pthread_detach(sync_thread);
