@@ -100,7 +100,8 @@ void update_client(client *client, char *home)
 
 				if(index >= 0) // arquivo já existe na estrutura
 				{
-					file_info f = client->fileinfo[index];
+					file_info f;
+					memcpy(&f, &(client->fileinfo[index]), sizeof(file_info));
 				
 					// se a data de modificação do arquivo que eu to lendo agora for mais recente que o que ja tava na estrutura self, sobrescrever.
 					if(file_more_recent_than(fi, f)) 

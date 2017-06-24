@@ -239,8 +239,6 @@ void* run_sync(void *socket_sync)
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, 1);
 
-		printf("message %s\n", buffer);
-
 		if (message < 0) 
 			printf("ERROR reading from socket");
 		else 
@@ -329,7 +327,7 @@ void* run_sync(void *socket_sync)
 						file_info f;
 
 						if(index >= 0)
-							f = connected_clients[cliindex].fileinfo[index];
+							memcpy(&f,&(connected_clients[cliindex].fileinfo[index]), sizeof(file_info));
 
 						// deleta arquivo da pasta sync do server
 						char fullpath[MAXNAME];
@@ -395,6 +393,7 @@ void sync_server(int socketfd)
 			
 			if(index >= 0)		// arquivo existe no servidor
 			{
+				printf("file exists. cm client mirror: %d, cm server: %d\n", client_mirror.fileinfo[i].commit_modified, connected_clients[cliindex].fileinfo[index].commit_modified);
 				//verifica se o arquivo no cliente é mais atual que o arquivo no servidor.
 				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].fileinfo[index].commit_modified)
 				{
