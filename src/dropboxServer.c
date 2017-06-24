@@ -379,7 +379,6 @@ void sync_server(int socketfd)
 	pthread_mutex_lock(&connected_clients[cliindex].mutex); 
 
 	update_client(&(connected_clients[cliindex]), home);
-	client c = connected_clients[cliindex];
 
   	// pra cada arquivo do cliente:
   	int i;
@@ -387,7 +386,8 @@ void sync_server(int socketfd)
     {
       	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
 		{
-           break;
+			printf("breakando pois filename: %s\n", client_mirror.fileinfo[i].name);
+           	break;
 		}
     	else
         {

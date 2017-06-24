@@ -53,8 +53,6 @@ void* sync_client(void *socket_sync)
 		printf("ARQUIVO NA STRUCT ENVIADA: %s\n", self.fileinfo[1].name);
 		write(socketfd, buffer, sizeof(struct client));
 
-
-
 		while(1)
 		{
 			char command;
@@ -179,8 +177,8 @@ void* sync_client(void *socket_sync)
 					//verifica se o arquivo no servidor é mais atual que o arquivo no cliente.
 					if(server_mirror.fileinfo[i].commit_modified > self.fileinfo[index].commit_modified)
 					{
-						printf("server commit: %d\n", server_mirror.fileinfo[i].commit_modified);
-						printf("client commit: %d\n", self.fileinfo[index].commit_modified);
+						printf("server commit: %d\n", server_mirror.current_commit);
+						printf("client commit: %d\n", self.current_commit);
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
 						bzero(buffer, BUFFER_SIZE);
