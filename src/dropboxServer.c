@@ -356,7 +356,7 @@ void* run_sync(void *socket_sync)
 			}
 		}
 		pthread_mutex_lock(&connected_clients[cliindex].mutex);
-		if(socketfd == connected_clients[cliindex].devices[0])
+		if(socketfd == connected_clients[cliindex].devices[0] && connected_clients[cliindex].devices[1] != 0)
         	state = STATE_DEV2;
 		else
 			state = STATE_DEV1;
@@ -387,17 +387,19 @@ void sync_server(int socketfd)
 	//tem que fazer cond wait com relação ao device que está conectado.
 	if(socketfd == connected_clients[cliindex].devices[0])
 	{
+		printf("DEV1\n");
 		pthread_mutex_lock(&connected_clients[cliindex].mutex);
 		while(state != STATE_DEV1)
 			pthread_cond_wait(&connected_clients[cliindex].cond, &connected_clients[cliindex].mutex);
-		pthread_mutex_lock(&connected_clients[cliindex].mutex);
+		pthread_mutex_unlock(&connected_clients[cliindex].mutex);
 	}
 	else
 	{
+		printf("DEV2\n");
 	 	pthread_mutex_lock(&connected_clients[cliindex].mutex);
 		while(state != STATE_DEV2)
 			pthread_cond_wait(&connected_clients[cliindex].cond, &connected_clients[cliindex].mutex);
-		pthread_mutex_lock(&connected_clients[cliindex].mutex);
+		pthread_mutex_unlock(&connected_clients[cliindex].mutex);
 	}
 
 	update_client(&(connected_clients[cliindex]), home);
