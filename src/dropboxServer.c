@@ -496,8 +496,8 @@ void sync_server(int socketfd)
 						n += read(socketfd, buffer+n, 1);
 					memcpy(&f, buffer, sizeof(struct file_info));*/
 
-					read(socketfd, buffer, MAXNAME);
-					printf("BUFFER AGORA: %s\n", buffer);
+					read(socketfd, buffer, 1);
+					printf("BUFFER AGORA: %c\n", buffer[0]);
 
 					//printf("fs name: %s\n", f.name);
 					//printf("fs name: %s\n", f.extension);

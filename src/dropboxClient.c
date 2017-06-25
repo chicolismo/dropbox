@@ -82,8 +82,9 @@ void* sync_client(void *socket_sync)
 				/*memcpy(buffer, &f, sizeof(file_info));
 				write(socketfd, buffer, sizeof(file_info));*/
 
-				memcpy(buffer, "CHEGUEI", MAXNAME);
-				write(socketfd, buffer, MAXNAME);
+				buffer[0] = 'C';
+				printf("CHAR: %c", buffer[0]);
+				write(socketfd, buffer, 1);
 				
 				printf("aqui!!!!\n");
 				// manda arquivo
