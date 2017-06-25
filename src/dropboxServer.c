@@ -412,6 +412,8 @@ void sync_server(int socketfd)
 
 	update_client(&(connected_clients[cliindex]), home);
 
+	printf("client mirror id %s, cc %d, file[0] %s file[1] %s\n", client_mirror.userid, client_mirror.current_commit, client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name);
+
   	// pra cada arquivo do cliente:
   	int i;
   	for(i = 0; i < MAXFILES; i++) 
