@@ -477,6 +477,7 @@ void sync_server(int socketfd)
 			}
 			else				// arquivo não existe no servidor
 			{
+				printf("file doesn't exist. mirror cc %d, server cc %d\n", client_mirror.current_commit, connected_clients[cliindex].current_commit);
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
 				if(client_mirror.current_commit == connected_clients[cliindex].current_commit)
 				{
@@ -523,6 +524,7 @@ void sync_server(int socketfd)
 				}
 				else
 				{
+					printf("deleting file in client???\n");
 					// deleta arquivo no cliente.
 					// o arquivo é velho e deve ser deletado do servidor adequadamente.
 					bzero(buffer, BUFFER_SIZE);
