@@ -310,7 +310,8 @@ int main(int argc, char *argv[])
 	strcpy(home,"/home/"); //home
 	//strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
-
+	//strcat(home, "/Documents");	//local 2 devices test
+	
 	init_client(&self, home, argv[1]);
 	
 	// conecta este cliente com o servidor, que criará uma thread para administrá-lo
