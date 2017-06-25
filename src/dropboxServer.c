@@ -111,7 +111,6 @@ int insert_client(client *clientinfo){
 
 void* run_client(void *conn_info)
 {
-	int n;
 	char buffer[BUFFER_SIZE];
 	char message;
 	//connection_info ci = *(connection_info*)conn_info;
@@ -122,12 +121,8 @@ void* run_client(void *conn_info)
 	printf("running client\n");
 
 	bzero(buffer, BUFFER_SIZE);
-	n = 0;
-	while(n < MAXNAME)
-		n += read(socketfd, buffer+n, 1);
+	read(socketfd, buffer, MAXNAME);
 	memcpy(clientid, buffer, MAXNAME);
-	//read(socketfd, buffer, MAXNAME);
-	//memcpy(clientid, buffer, MAXNAME);
 
 	client *cli = malloc(sizeof(client));
  
@@ -149,11 +144,8 @@ void* run_client(void *conn_info)
 					break;
 				case DOWNLOAD:
 					{
-						n = 0;
 						bzero(buffer, BUFFER_SIZE);
-						while(n < MAXNAME)
-							n += read(socketfd, buffer+n, 1);
-						//read(socketfd, buffer, MAXNAME);
+						read(socketfd, buffer, MAXNAME);
 
 						int client_index = return_client(clientid, cli);						
 
@@ -192,10 +184,7 @@ void* run_client(void *conn_info)
 				case UPLOAD:
 					{
 						bzero(buffer, BUFFER_SIZE);
-						n = 0;
-						while(n < MAXNAME)
-							n += read(socketfd, buffer+n, 1);
-						//read(socketfd, buffer, MAXNAME);
+						read(socketfd, buffer, MAXNAME);
 
 						// pegar o último elemento
 						char file[256];
@@ -235,7 +224,6 @@ void* run_client(void *conn_info)
 
 void* run_sync(void *socket_sync)
 {
-	int n;
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 	char message;
@@ -268,12 +256,8 @@ void* run_sync(void *socket_sync)
 				char client_id[MAXNAME];
 				//recebe id do cliente. ---> VER SE NÃO É MELHOR ELE RECEBER ANTES???
 				//pegar os dados do buffer
-				
-				n=0;
 				bzero(buffer, BUFFER_SIZE);
-				while(n < MAXNAME)
-					n += read(socketfd, buffer+n, 1);
-				//read(socketfd, buffer, MAXNAME);
+				read(socketfd, buffer, MAXNAME);
 				memcpy(client_id, buffer, MAXNAME);
 
 				printf("sync_client for client %s\n", client_id);
@@ -308,11 +292,8 @@ void* run_sync(void *socket_sync)
 						printf("Fazendo download");
 
 						// recebe nome do arquivo
-						n=0;
 						bzero(buffer,BUFFER_SIZE);
-						while(n < MAXNAME)
-							n += read(socketfd, buffer+n, 1);
-						//read(socketfd, buffer, MAXNAME);
+						read(socketfd, buffer, MAXNAME);
 						memcpy(fname, buffer, MAXNAME);
 						printf(" do arquivo %s\n", fname);
 						
@@ -346,13 +327,10 @@ void* run_sync(void *socket_sync)
 					}
 					else if(command == DELETE)
 					{
-						n=0;
 						bzero(buffer,BUFFER_SIZE);
 
 						// recebe nome do arquivo
-						//read(socketfd, buffer, MAXNAME);
-						while(n < MAXNAME)
-							n += read(socketfd, buffer+n, 1);
+						read(socketfd, buffer, MAXNAME);
 						memcpy(fname, buffer, MAXNAME);
 
 						// procura arquivo
@@ -577,6 +555,7 @@ int main(int argc, char *argv[])
 
 	strcpy(home,"/home/");	//home
 	//strcpy(home,"/home/grad/");	//ufrgs
+	//strcpy(home, "/home/Documents/");	// local 2 devices test
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
@@ -631,11 +610,8 @@ int main(int argc, char *argv[])
 			char clientid[MAXNAME];
 
 			// cliente me manda id
-			int n = 0;
 			bzero(buffer, BUFFER_SIZE);
-			//read(socket_client, buffer, MAXNAME);
-			while(n < MAXNAME)
-				n += read(socket_client, buffer+n, 1);
+			read(socket_client, buffer, MAXNAME);
 			memcpy(clientid, buffer, MAXNAME);
 
 			printf("client: %s\n", clientid);
