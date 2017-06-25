@@ -76,11 +76,14 @@ void* sync_client(void *socket_sync)
 				if(index >= 0)
 					memcpy(&f, &self.fileinfo[index], sizeof(file_info));
 
-				printf("index: %d\n", index);
+				printf("file struct name: %s\n", f.name);
 				// manda struct
 				bzero(buffer,BUFFER_SIZE);
-				memcpy(buffer, &f, sizeof(file_info));
-				write(socketfd, buffer, sizeof(file_info));
+				/*memcpy(buffer, &f, sizeof(file_info));
+				write(socketfd, buffer, sizeof(file_info));*/
+
+				memcpy(buffer, "CHEGUEI", MAXNAME);
+				write(socketfd, buffer, MAXNAME);
 				
 				printf("ué\n");
 				// manda arquivo
