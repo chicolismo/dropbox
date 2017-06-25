@@ -481,7 +481,7 @@ void sync_server(int socketfd)
 				int server_commit = connected_clients[cliindex].current_commit;
 
 				// device 2 executando
-				if(server commit == (client_mirror.current_commit + 1))	
+				if(server_commit == (client_mirror.current_commit + 1))	
 					server_commit -= 1;
 
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
