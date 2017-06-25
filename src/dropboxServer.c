@@ -420,7 +420,7 @@ void sync_server(int socketfd)
     {
       	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
 		{
-			printf("breakando pois filename: %s\n", client_mirror.fileinfo[i].name);
+			printf("i = %d, breakando pois filename: %s\n", i, client_mirror.fileinfo[i].name);
            	break;
 		}
     	else

@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 	strcpy(home,"/home/"); //home
 	//strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
-	//strcat(home, "/Documents");	//local 2 devices test
+	strcat(home, "/Documents");	//local 2 devices test
 	
 	init_client(&self, home, argv[1]);
 	
