@@ -229,10 +229,7 @@ void* sync_client(void *socket_sync)
 					printf("i don't exist\n");
 					int self_commit = self.current_commit;
 		
-					if(self_commit == (server_mirror.current_commit - 2))
-						self_commit += 1;
-
-					if(self_commit == (server_mirror.current_commit - 1))
+					if(self.current_commit == (server_mirror.current_commit - 1))
 					{
 						// o arquivo é velho e deve ser deletado do servidor adequadamente.
 						bzero(buffer, BUFFER_SIZE);
@@ -315,7 +312,7 @@ int main(int argc, char *argv[])
 	strcpy(home,"/home/"); //home
 	//strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
-	//strcat(home, "/Documents");	//local 2 devices test
+	strcat(home, "/Documents");	//local 2 devices test
 	
 	init_client(&self, home, argv[1]);
 	
