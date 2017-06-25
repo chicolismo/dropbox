@@ -497,10 +497,11 @@ void sync_server(int socketfd)
 					memcpy(&f, buffer, sizeof(struct file_info));*/
 
 					read(socketfd, buffer, MAXNAME);
+					printf("BUFFER AGORA: %s\n", buffer);
 
-					printf("fs name: %s\n", f.name);
-					printf("fs name: %s\n", f.extension);
-					printf("fs cm: %d\n", f.size);
+					//printf("fs name: %s\n", f.name);
+					//printf("fs name: %s\n", f.extension);
+					//printf("fs cm: %d\n", f.size);
 		
 					// receive file funciona com full path
 					char fullpath[MAXNAME];

@@ -85,7 +85,7 @@ void* sync_client(void *socket_sync)
 				memcpy(buffer, "CHEGUEI", MAXNAME);
 				write(socketfd, buffer, MAXNAME);
 				
-				printf("ué\n");
+				printf("aqui!!!!\n");
 				// manda arquivo
 				char fullpath[256];
 				strcpy(fullpath, home);
