@@ -635,7 +635,7 @@ int main(int argc, char *argv[])
 			bzero(buffer, BUFFER_SIZE);
 			//read(socket_client, buffer, MAXNAME);
 			while(n < MAXNAME)
-				n += read(socketfd, buffer+n, 1);
+				n += read(socket_client, buffer+n, 1);
 			memcpy(clientid, buffer, MAXNAME);
 
 			printf("client: %s\n", clientid);
