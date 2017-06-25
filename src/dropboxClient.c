@@ -66,8 +66,11 @@ void* sync_client(void *socket_sync)
 			{
 				// recebe nome do arquivo
 				bzero(buffer,BUFFER_SIZE);
-				read(socketfd, buffer, MAXNAME);
+				while(n < MAXNAME)
+					n += read(socketfd, buffer+n, 1);
 				memcpy(fname, buffer, MAXNAME);
+				//read(socketfd, buffer, MAXNAME);
+				//memcpy(fname, buffer, MAXNAME);
 				printf("file name recebeu: %s\n", fname);
 				
 				// procura arquivo
@@ -77,10 +80,10 @@ void* sync_client(void *socket_sync)
 					memcpy(&f, &self.fileinfo[index], sizeof(file_info));
 
 				printf("file struct name: %s\n", f.name);
-				// manda struct
+				/*// manda struct
 				bzero(buffer,BUFFER_SIZE);
 				memcpy(buffer, &f, sizeof(file_info));
-				write(socketfd, buffer, sizeof(file_info));
+				write(socketfd, buffer, sizeof(file_info));*/
 				
 				printf("aqui!!!!\n");
 				// manda arquivo
@@ -104,8 +107,12 @@ void* sync_client(void *socket_sync)
 			{
 				// recebe nome do arquivo
 				bzero(buffer,BUFFER_SIZE);
-				read(socketfd, buffer, MAXNAME);
-				memcpy(fname, buffer, MAXNAME);
+				while(n < MAXNAME)
+					n += read(socketfd, buffer+n, 1);
+				memcpy(fname, buffer, MAXNAME);				
+
+				//read(socketfd, buffer, MAXNAME);
+				//memcpy(fname, buffer, MAXNAME);
 
 				// procura arquivo
 				int index = search_files(&self, fname);
@@ -184,7 +191,6 @@ void* sync_client(void *socket_sync)
 						bzero(buffer, BUFFER_SIZE);
 						buffer[0] = DOWNLOAD;
 						write(socketfd, buffer, 1);
-
 						
 
 						bzero(buffer,BUFFER_SIZE);
