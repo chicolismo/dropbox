@@ -35,6 +35,7 @@ int connect_server(char *host, int port)
 //VIROU A FUNÇÃO DA THREAD SEPARADA DO DAEMON
 void* sync_client(void *socket_sync)
 {
+	int n;
 	char buffer[BUFFER_SIZE];
 	int socketfd = *(int*)socket_sync;
 
@@ -65,6 +66,7 @@ void* sync_client(void *socket_sync)
 			if(command == DOWNLOAD)
 			{
 				// recebe nome do arquivo
+				n=0;
 				bzero(buffer,BUFFER_SIZE);
 				while(n < MAXNAME)
 					n += read(socketfd, buffer+n, 1);
@@ -80,10 +82,10 @@ void* sync_client(void *socket_sync)
 					memcpy(&f, &self.fileinfo[index], sizeof(file_info));
 
 				printf("file struct name: %s\n", f.name);
-				/*// manda struct
+				// manda struct
 				bzero(buffer,BUFFER_SIZE);
 				memcpy(buffer, &f, sizeof(file_info));
-				write(socketfd, buffer, sizeof(file_info));*/
+				write(socketfd, buffer, sizeof(file_info));
 				
 				printf("aqui!!!!\n");
 				// manda arquivo
@@ -106,6 +108,7 @@ void* sync_client(void *socket_sync)
 			else if(command == DELETE)
 			{
 				// recebe nome do arquivo
+				n=0;
 				bzero(buffer,BUFFER_SIZE);
 				while(n < MAXNAME)
 					n += read(socketfd, buffer+n, 1);
