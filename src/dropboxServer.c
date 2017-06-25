@@ -478,8 +478,14 @@ void sync_server(int socketfd)
 			else				// arquivo não existe no servidor
 			{
 				printf("file doesn't exist. mirror cc %d, server cc %d\n", client_mirror.current_commit, connected_clients[cliindex].current_commit);
+				int server_commit = connected_clients[cliindex].current_commit;
+
+				// device 2 executando
+				if(socketfd != connected_clients[cliindex].devices[0])	
+					server_commit -= 1;
+
 				// verifica se o arquivo no cliente tem um commit_modified > state do servidor
-				if(client_mirror.current_commit == connected_clients[cliindex].current_commit)
+				if(client_mirror.current_commit == server_commit)
 				{
 					//isso quer dizer que é um arquivo novo colocado no servidor em outro pc.
 					// pede para o cliente mandar o arquivo
