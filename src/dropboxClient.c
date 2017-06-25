@@ -79,12 +79,8 @@ void* sync_client(void *socket_sync)
 				printf("file struct name: %s\n", f.name);
 				// manda struct
 				bzero(buffer,BUFFER_SIZE);
-				/*memcpy(buffer, &f, sizeof(file_info));
-				write(socketfd, buffer, sizeof(file_info));*/
-
-				buffer[0] = 'C';
-				printf("CHAR: %c", buffer[0]);
-				write(socketfd, buffer, 1);
+				memcpy(buffer, &f, sizeof(file_info));
+				write(socketfd, buffer, sizeof(file_info));
 				
 				printf("aqui!!!!\n");
 				// manda arquivo
