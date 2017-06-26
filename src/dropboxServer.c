@@ -118,7 +118,7 @@ void* run_client(void *conn_info)
 
 	char clientid[MAXNAME];
 
-	printf("running client\n");
+	//printf("running client\n");
 
 	bzero(buffer, BUFFER_SIZE);
 	read(socketfd, buffer, MAXNAME);
@@ -169,7 +169,6 @@ void* run_client(void *conn_info)
 							strcat(fullpath, connected_clients[client_index].fileinfo[index].extension);
 
 							// manda arquivo	
-							printf("Enviando %s...\n", fullpath);			
 							send_file(fullpath, socketfd);
 						}
 						else
@@ -230,7 +229,6 @@ void* run_sync(void *socket_sync)
 
 	int cliindex;
 
-	printf("criei thread\n");
 
 	while(1) 
 	{
@@ -239,7 +237,6 @@ void* run_sync(void *socket_sync)
 
 		// aí aqui executa o loop de aceite do sync_client
 
-		printf("left sync_server, init sync_client\n");
 
 		bzero(buffer, BUFFER_SIZE);
 		message = read(socketfd, buffer, 1);
@@ -249,7 +246,6 @@ void* run_sync(void *socket_sync)
 		else 
 		{
 			message = buffer[0];
-			printf("message %c\n", message);
 
 			if(message == SYNC)
 			{
@@ -260,15 +256,12 @@ void* run_sync(void *socket_sync)
 				read(socketfd, buffer, MAXNAME);
 				memcpy(client_id, buffer, MAXNAME);
 
-				printf("sync_client for client %s\n", client_id);
 
 				// pega cliente na lista de clientes e envia o mirror para o cliente.
 				client *cli = malloc(sizeof(client));
 				cliindex = return_client(client_id, cli);
 
-				printf("cliindex: %d\n", cliindex); 
 
-				printf("client returned is: %s", connected_clients[cliindex].userid);
 
 				update_client(&(connected_clients[cliindex]), home);
 	
@@ -289,13 +282,11 @@ void* run_sync(void *socket_sync)
 
 					if(command == DOWNLOAD)
 					{
-						printf("Fazendo download");
 
 						// recebe nome do arquivo
 						bzero(buffer,BUFFER_SIZE);
 						read(socketfd, buffer, MAXNAME);
 						memcpy(fname, buffer, MAXNAME);
-						printf(" do arquivo %s\n", fname);
 						
 						// procura arquivo
 						int index = search_files(&(connected_clients[cliindex]), fname);
@@ -303,7 +294,6 @@ void* run_sync(void *socket_sync)
 
 						if(index >= 0)
 							memcpy(&f, &(connected_clients[cliindex].fileinfo[index]), sizeof(struct file_info));
-						printf("file_info name para enviar: %s\n", f.name);
 
 						// manda struct	
 						bzero(buffer,BUFFER_SIZE);
@@ -320,7 +310,6 @@ void* run_sync(void *socket_sync)
 						strcat(fullpath, ".");
 						strcat(fullpath, f.extension);
 
-						printf("Fullpath a ser enviado: %s\n", fullpath);
 
 						// manda arquivo				
 						send_file(fullpath, socketfd);
@@ -386,8 +375,6 @@ void sync_server(int socketfd)
 		n += read(socketfd, buffer+n, 1);
 	memcpy(&client_mirror, buffer, sizeof(struct client));
 	
-	printf("oi, quero fazer syn_server\n");
-	printf("client mirror id %s, cc %d, file[0] %s file[1] %s\n", client_mirror.userid, client_mirror.current_commit, client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name);
 
 	client *cli = malloc(sizeof(client));
 	int cliindex = return_client(client_mirror.userid, cli);
@@ -395,7 +382,6 @@ void sync_server(int socketfd)
 	//tem que fazer cond wait com relação ao device que está conectado.
 	if(socketfd == connected_clients[cliindex].devices[0])
 	{
-		printf("DEV1\n");
 		pthread_mutex_lock(&connected_clients[cliindex].mutex);
 		while(state != STATE_DEV1)
 			pthread_cond_wait(&connected_clients[cliindex].cond, &connected_clients[cliindex].mutex);
@@ -403,7 +389,6 @@ void sync_server(int socketfd)
 	}
 	else
 	{
-		printf("DEV2\n");
 	 	pthread_mutex_lock(&connected_clients[cliindex].mutex);
 		while(state != STATE_DEV2)
 			pthread_cond_wait(&connected_clients[cliindex].cond, &connected_clients[cliindex].mutex);
@@ -412,7 +397,6 @@ void sync_server(int socketfd)
 
 	update_client(&(connected_clients[cliindex]), home);
 
-	printf("client mirror id %s, cc %d, file[0] %s file[1] %s\n", client_mirror.userid, client_mirror.current_commit, client_mirror.fileinfo[0].name, client_mirror.fileinfo[1].name);
 
   	// pra cada arquivo do cliente:
   	int i;
@@ -420,7 +404,6 @@ void sync_server(int socketfd)
     {
       	if(strcmp(client_mirror.fileinfo[i].name, "\0") == 0)
 		{
-			printf("i = %d, breakando pois filename: %s\n", i, client_mirror.fileinfo[i].name);
            	break;
 		}
     	else
@@ -430,7 +413,6 @@ void sync_server(int socketfd)
 			
 			if(index >= 0)		// arquivo existe no servidor
 			{
-				printf("file exists. cm client mirror: %d, cm server: %d\n", client_mirror.fileinfo[i].commit_modified, connected_clients[cliindex].fileinfo[index].commit_modified);
 				//verifica se o arquivo no cliente é mais atual que o arquivo no servidor.
 				if(client_mirror.fileinfo[i].commit_modified > connected_clients[cliindex].fileinfo[index].commit_modified)
 				{
@@ -454,7 +436,6 @@ void sync_server(int socketfd)
 						n += read(socketfd, buffer+n, 1);
 					memcpy(&f, buffer, sizeof(struct file_info));
 
-					printf("f name: %s\n", f.name);
 				
 					// receive file funciona com full path
 					char fullpath[MAXNAME];
@@ -466,7 +447,6 @@ void sync_server(int socketfd)
 					strcat(fullpath, ".");
 					strcat(fullpath, f.extension);
 
-					printf("fullpath %s\n", fullpath);
 			
 					//recebe arquivo
 					receive_file(fullpath, socketfd);
@@ -477,7 +457,6 @@ void sync_server(int socketfd)
 			}
 			else				// arquivo não existe no servidor
 			{
-				printf("file doesn't exist. mirror cc %d, server cc %d\n", client_mirror.current_commit, connected_clients[cliindex].current_commit);
 				int server_commit = connected_clients[cliindex].current_commit;
 
 				// device 2 executando
@@ -505,9 +484,6 @@ void sync_server(int socketfd)
 						n += read(socketfd, buffer+n, 1);
 					memcpy(&f, buffer, sizeof(struct file_info));
 
-					printf("fs name: %s\n", f.name);
-					printf("fs name: %s\n", f.extension);
-					printf("fs cm: %d\n", f.size);
 		
 					// receive file funciona com full path
 					char fullpath[MAXNAME];
@@ -520,17 +496,14 @@ void sync_server(int socketfd)
 					strcat(fullpath, f.extension);
 
 					//recebe arquivo
-					printf("Recebendo %s...\n", fullpath);
 					receive_file(fullpath, socketfd);
 			
-					printf("saindo\n");
 
 					//bota f na estrutura self
 					insert_file_into_client_list(&(connected_clients[cliindex]), f);
 				}
 				else
 				{
-					printf("deleting file in client???\n");
 					// deleta arquivo no cliente.
 					// o arquivo é velho e deve ser deletado do servidor adequadamente.
 					bzero(buffer, BUFFER_SIZE);
@@ -551,7 +524,6 @@ void sync_server(int socketfd)
 	//if(connected_clients[cliindex].devices[1] == 0 || socketfd == connected_clients[cliindex].devices[0])
 	connected_clients[cliindex].current_commit += 1;
 
-	printf("leaving sync server\n");
 
 	// avisa que acabou o seu sync.
 	bzero(buffer, BUFFER_SIZE);
@@ -627,21 +599,16 @@ int main(int argc, char *argv[])
 			read(socket_client, buffer, MAXNAME);
 			memcpy(clientid, buffer, MAXNAME);
 
-			printf("client: %s\n", clientid);
 
-			printf("home: %s\n", home);
 			client *cli = malloc(sizeof(client));
 
-			printf("cli %p\n", cli);
 			init_client(cli, home, clientid);
 
-			printf ("AAAAAA\n");
 			if(insert_client(cli) == ACCEPTED)
 			{
 				bzero(buffer, BUFFER_SIZE);
 				//sprintf(buffer, "%s", "A");
 				buffer[0] = 'A';		
-				printf("buffer %s\n", buffer);
 				write(socket_client, buffer, 1);
 				clients += 1;
 			}
@@ -655,7 +622,6 @@ int main(int argc, char *argv[])
 				break;
 			}
 
-			printf("buffer: %s\n", buffer);
 
 			// agora cria a outra conexão. 
 			// envia quantos clientes estão conectados para o cliente saber em que +x porta deve conectar o sync

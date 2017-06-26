@@ -6,7 +6,7 @@ void init_client(client *client, char *home, char *login)
 	//inicializa estrutura self do cliente
 	strcpy(client->userid, login);
 	
-	printf("client login %s\n", client->userid);
+	//printf("client login %s\n", client->userid);
 	//inicializa todos os nomes de arquivo como empty string, preparando para a função update client
 	int i;
 	for(i = 0; i < MAXFILES; i++)
@@ -18,7 +18,7 @@ void init_client(client *client, char *home, char *login)
 	strcat(sync_dir, "/sync_dir_");
 	strcat(sync_dir, login);
 
-	printf("syncdir: %s\n", sync_dir);
+	//printf("syncdir: %s\n", sync_dir);
 
 	struct stat st;
 	if (stat(sync_dir, &st) != 0) {
@@ -76,8 +76,6 @@ void update_client(client *client, char *home)
 			  	strcpy(fi.name, name);
 			  	strcpy(fi.extension, extension);
 
-				printf("NOME DO ARQUIVO: %s\n", fi.name);
-				printf("EXTENSÃO DO ARQUIVO: %s\n", fi.extension);
 
 				char *til = strchr(fi.extension, '~');
 				int empty_name = strcmp(fi.name, "");
@@ -294,14 +292,14 @@ void receive_file(char* file_name, int client_socket)
 
     bzero(char_buffer, 1);
     read(client_socket, char_buffer, 1);
-	printf("%c\n", char_buffer[0]);
+	//printf("%c\n", char_buffer[0]);
     //fputc(char_buffer[0], fp);
     while(char_buffer[0] != 25)
     {
         fprintf (fp, "%c", char_buffer[0]);
         bzero(char_buffer, 1);
         read(client_socket, char_buffer, 1);
-		printf("%d\n", char_buffer[0]);
+		//printf("%d\n", char_buffer[0]);
         
 	}
 
@@ -324,7 +322,7 @@ void send_file(char *file, int server_socket)
 	{
 		bzero(buffer, 1);
 		buffer[0] = string[0];
-		printf("%c", buffer[0]);
+		//printf("%c", buffer[0]);
 		write(server_socket, buffer, 1);
 	}
 	
