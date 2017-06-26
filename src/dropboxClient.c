@@ -43,6 +43,8 @@ void* sync_client(void *socket_sync)
 	{
 		// faz isso a cada x segundos:
 		sleep(SLEEP);
+
+		printf("syncing...\n");
 		
 		// AQUI ETAPA DO SYNC_SERVER!
 		update_client(&self, home);
@@ -50,7 +52,6 @@ void* sync_client(void *socket_sync)
 		// envia seu mirror pro servidor
 		bzero(buffer, BUFFER_SIZE);
 		memcpy(buffer, &self, sizeof(struct client));
-		printf("ARQUIVO NA STRUCT ENVIADA: %s\n", self.fileinfo[1].name);
 		write(socketfd, buffer, sizeof(struct client));
 
 		while(1)
@@ -68,7 +69,6 @@ void* sync_client(void *socket_sync)
 				bzero(buffer,BUFFER_SIZE);
 				read(socketfd, buffer, MAXNAME);
 				memcpy(fname, buffer, MAXNAME);
-				printf("file name recebeu: %s\n", fname);
 				
 				// procura arquivo
 				int index = search_files(&self, fname);
@@ -76,13 +76,11 @@ void* sync_client(void *socket_sync)
 				if(index >= 0)
 					memcpy(&f, &self.fileinfo[index], sizeof(file_info));
 
-				printf("file struct name: %s\n", f.name);
 				// manda struct
 				bzero(buffer,BUFFER_SIZE);
 				memcpy(buffer, &f, sizeof(file_info));
 				write(socketfd, buffer, sizeof(file_info));
 				
-				printf("aqui!!!!\n");
 				// manda arquivo
 				char fullpath[256];
 				strcpy(fullpath, home);
@@ -93,12 +91,8 @@ void* sync_client(void *socket_sync)
 				strcat(fullpath, ".");
 				strcat(fullpath, f.extension);
 
-				printf("fullpath %s\n", fullpath);
-
 				// manda arquivo				
 				send_file(fullpath, socketfd);
-
-				printf("saindo\n");
 			}
 			else if(command == DELETE)
 			{
@@ -161,37 +155,27 @@ void* sync_client(void *socket_sync)
 	  	int i;
 	  	for(i = 0; i < MAXFILES; i++) 
 		{
-			printf("file: %s\n", server_mirror.fileinfo[i].name);
 		  	if(strcmp(server_mirror.fileinfo[i].name, "\0") == 0)
 		       break;
 			else
 		    {
 		    	// arquivo existe no cliente?
 				int index = search_files(&self, server_mirror.fileinfo[i].name);
-				printf("ae\n");
 
 				if(index >= 0)		// arquivo existe no cliente
 				{
-					printf("i exist\n");
-					printf("sm cm %d, self cm %d\n", server_mirror.fileinfo[i].commit_modified, self.fileinfo[index].commit_modified);
 					//verifica se o arquivo no servidor é mais atual que o arquivo no cliente.
 					if(server_mirror.fileinfo[i].commit_modified > self.fileinfo[index].commit_modified)
 					{
-						printf("server commit: %d\n", server_mirror.current_commit);
-						printf("client commit: %d\n", self.current_commit);
 						//isso quer dizer que o arquivo no servidor é de um commit mais novo que o estado atual do cliente.
 						// pede para o servidor mandar o arquivo
 						bzero(buffer, BUFFER_SIZE);
 						buffer[0] = DOWNLOAD;
 						write(socketfd, buffer, 1);
 
-						
-
 						bzero(buffer,BUFFER_SIZE);
 						memcpy(buffer, server_mirror.fileinfo[i].name, MAXNAME);
 						write(socketfd, buffer, MAXNAME);
-						printf("nome enviado: %s\n", buffer);
-
 					
 						struct file_info f;
 						//fica esperando receber struct
@@ -200,10 +184,6 @@ void* sync_client(void *socket_sync)
 						while(n < sizeof(struct file_info)){
 							n += read(socketfd, buffer+n, 1	);}
 						memcpy(&f, buffer, sizeof(struct file_info));
-
-
-						printf("nome arquivo: %s\n", f.name);
-						printf("extensao do arquivo: %s\n", f.extension);
 
 						// receive file funciona com full path
 						char fullpath[256];
@@ -215,20 +195,14 @@ void* sync_client(void *socket_sync)
 						strcat(fullpath, ".");
 						strcat(fullpath, f.extension);
 
-						printf("fullpath de recebimento: %s\n", fullpath);
-				
 						//recebe arquivo
 						receive_file(fullpath, socketfd);
-						printf("acabou de receber\n");
 						// atualiza na estrutura do cliente.
 						self.fileinfo[index] = f;
 					}
 				}
 				else				// arquivo não existe no cliente
 				{
-					printf("i don't exist\n");
-					//int self_commit = self.current_commit;
-		
 					if(self.current_commit == (server_mirror.current_commit - 1))
 					{
 						// o arquivo é velho e deve ser deletado do servidor adequadamente.
@@ -281,18 +255,15 @@ void* sync_client(void *socket_sync)
 		    }
 		}
 
-		printf("FIM DO SYNC\n");
-		
 		// avisa que acabou o seu sync.
 		bzero(buffer, BUFFER_SIZE);
 		buffer[0] = SYNC_END;
 		write(socketfd, buffer, 1);
 
 		//avança o estado de commit do cliente para o mesmo do servidor, já que ele atualizou.
-		//if(self.current_commit < (server_mirror.current_commit - 1)) 
 		self.current_commit = server_mirror.current_commit; 
-		//else
-		//	self.current_commit += 1;
+
+		printf("ending sync.\n");
 	}
 }
 
@@ -309,10 +280,9 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	strcpy(home,"/home/"); //home
-	//strcpy(home,"/home/grad/");	//ufrgs
+	//strcpy(home,"/home/"); //home
+	strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
-	strcat(home, "/Documents");	//local 2 devices test
 	
 	init_client(&self, home, argv[1]);
 	

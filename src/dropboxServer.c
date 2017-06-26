@@ -232,6 +232,7 @@ void* run_sync(void *socket_sync)
 
 	while(1) 
 	{
+		printf("syncing...\n");
 		// aí executa aqui o sync_server.
 		sync_server(socketfd);
 
@@ -359,6 +360,8 @@ void* run_sync(void *socket_sync)
 			state = STATE_DEV1;
         pthread_cond_signal(&connected_clients[cliindex].cond);
         pthread_mutex_unlock(&connected_clients[cliindex].mutex);
+
+		printf("ending sync.\n");
 	}
 }
 
@@ -519,9 +522,6 @@ void sync_server(int socketfd)
     }
 
 	//avança o estado de commit do cliente no servidor.
-	// GAMBIARRA PARA NÃO BUGAR COM 2 DEVICES: 
-	// INCREMENTA COMMIT APENAS QUANDO EXECUTA O SYNC_SERVER DO PRIMEIRO DEVICE
-	//if(connected_clients[cliindex].devices[1] == 0 || socketfd == connected_clients[cliindex].devices[0])
 	connected_clients[cliindex].current_commit += 1;
 
 
@@ -538,9 +538,8 @@ int main(int argc, char *argv[])
     int i;
 	char buffer[BUFFER_SIZE];
 
-	strcpy(home,"/home/");	//home
-	//strcpy(home,"/home/grad/");	//ufrgs
-	//strcpy(home, "/home/Documents/");	// local 2 devices test
+	//strcpy(home,"/home/");	//home
+	strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
 	strcat(home, "/server");
 
