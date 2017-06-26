@@ -229,6 +229,7 @@ void* sync_client(void *socket_sync)
 					printf("i don't exist\n");
 					//int self_commit = self.current_commit;
 		
+					printf("client commit: %d, server file commit: %d", self.current_commit, server_mirror.fileinfo[i].commit_modified);
 					if(self.current_commit > server_mirror.fileinfo[i].commit_modified)
 					{
 						// o arquivo é velho e deve ser deletado do servidor adequadamente.
