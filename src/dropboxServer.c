@@ -548,8 +548,8 @@ void sync_server(int socketfd)
 	//avança o estado de commit do cliente no servidor.
 	// GAMBIARRA PARA NÃO BUGAR COM 2 DEVICES: 
 	// INCREMENTA COMMIT APENAS QUANDO EXECUTA O SYNC_SERVER DO PRIMEIRO DEVICE
-	if(connected_clients[cliindex].devices[1] == 0 || socketfd == connected_clients[cliindex].devices[0])
-		connected_clients[cliindex].current_commit += 1;
+	//if(connected_clients[cliindex].devices[1] == 0 || socketfd == connected_clients[cliindex].devices[0])
+	connected_clients[cliindex].current_commit += 1;
 
 	printf("leaving sync server\n");
 
