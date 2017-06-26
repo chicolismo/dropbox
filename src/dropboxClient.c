@@ -227,7 +227,7 @@ void* sync_client(void *socket_sync)
 				else				// arquivo não existe no cliente
 				{
 					printf("i don't exist\n");
-					int self_commit = self.current_commit;
+					//int self_commit = self.current_commit;
 		
 					if(self.current_commit == (server_mirror.current_commit - 1))
 					{
