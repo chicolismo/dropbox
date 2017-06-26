@@ -280,8 +280,8 @@ int main(int argc, char *argv[])
 		exit(0);
     }
 
-	//strcpy(home,"/home/"); //home
-	strcpy(home,"/home/grad/");	//ufrgs
+	strcpy(home,"/home/"); //home
+	//strcpy(home,"/home/grad/");	//ufrgs
 	strcat(home, getlogin());
 	
 	init_client(&self, home, argv[1]);
